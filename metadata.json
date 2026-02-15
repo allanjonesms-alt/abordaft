@@ -1,0 +1,8 @@
+{
+  "name": "SGAFT - Sistema de Gerenciamento de Abordagem da Força Tática",
+  "description": "Sistema tático para registro, consulta e gerenciamento de abordagens policiais, indivíduos e galeria de registros fotográficos.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
