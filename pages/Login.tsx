@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { User, UserRole } from '../types';
 import { supabase } from '../lib/supabase';
@@ -143,7 +142,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <div className="mt-12 text-center">
             <p className="text-slate-700 text-[9px] font-black uppercase tracking-[0.4em]">
-              SGAFT V2.5.5 • PROTEÇÃO & SERVIÇO
+              SGAFT V2.5.5 • CREATED BY ALLAN JONES
             </p>
           </div>
         </div>
