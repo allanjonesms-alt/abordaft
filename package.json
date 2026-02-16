@@ -6,7 +6,7 @@
   "description": "SGAFT - Sistema de Gerenciamento de Abordagem da Força Tática",
   "scripts": {
     "start": "serve .",
-    "build": "echo 'No build step required for ESM-native app'"
+    "build": "mkdir -p public && cp -rf index.html index.tsx App.tsx types.ts constants.ts metadata.json components pages lib sql public/"
   },
   "keywords": [
     "tactical",
