@@ -29,7 +29,10 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ user, onClose
     setError('');
     setSuccess(false);
 
-    if (!user) return;
+    if (!user) {
+      setError('Sessão inválida. Reinicie o sistema.');
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
       setError('As senhas não coincidem.');
@@ -44,29 +47,35 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ user, onClose
     setIsSaving(true);
 
     try {
+      // 1. Verifica a senha atual antes de permitir a troca
       const { data: userData, error: fetchError } = await supabase
         .from('usuarios_sgaft')
         .select('senha')
         .eq('id', user.id)
         .single();
 
-      if (fetchError || userData.senha !== currentPassword) {
+      if (fetchError || !userData || userData.senha !== currentPassword) {
         setError('Senha atual incorreta.');
         setIsSaving(false);
         return;
       }
 
-      const { error: updateError } = await supabase
+      // 2. Executa o update utilizando o ID como filtro único
+      const { data, error: updateError } = await supabase
         .from('usuarios_sgaft')
         .update({ senha: newPassword })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select();
 
-      if (updateError) throw updateError;
+      if (updateError || !data || data.length === 0) {
+        throw new Error(updateError?.message || 'Erro ao localizar usuário no banco.');
+      }
 
       setSuccess(true);
       setTimeout(() => onClose(), 2000);
     } catch (err: any) {
-      setError('Erro operacional: ' + err.message);
+      console.error('Erro na troca de senha:', err);
+      setError('Erro operacional: ' + (err.message || 'Falha na conexão.'));
     } finally {
       setIsSaving(false);
     }

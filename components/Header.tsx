@@ -52,8 +52,8 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
               <i className="fas fa-home text-lg"></i>
             </Link>
 
-            {/* Engrenagem: Link para Admin, Modal para Operador */}
-            {user?.role === UserRole.ADMIN ? (
+            {/* Engrenagem: Link para Configurações (Apenas Admin) */}
+            {user?.role === UserRole.ADMIN && (
               <Link 
                 to="/configuracoes" 
                 className={`p-2 rounded-lg transition-all flex items-center justify-center ${location.pathname === '/configuracoes' ? 'bg-yellow-600/20 text-yellow-500' : 'text-gray-400 hover:bg-slate-700 hover:text-white'}`}
@@ -61,24 +61,9 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
               >
                 <i className="fas fa-cog text-lg"></i>
               </Link>
-            ) : (
-              <button 
-                onClick={() => setIsPasswordModalOpen(true)}
-                className="p-2 rounded-lg transition-all flex items-center justify-center text-gray-400 hover:bg-slate-700 hover:text-white"
-                title="Minha Conta / Senha"
-              >
-                <i className="fas fa-cog text-lg"></i>
-              </button>
             )}
 
             <div className="h-8 w-px bg-slate-700 mx-1"></div>
-
-            <div className="hidden md:flex flex-col items-end mr-2">
-              <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest leading-none mb-1">
-                {user?.role === UserRole.ADMIN ? 'ADMINISTRADOR' : 'OPERADOR'}
-              </span>
-              <span className="text-sm text-white font-black truncate max-w-[150px]">{user?.nome}</span>
-            </div>
 
             <button 
               onClick={onLogout}

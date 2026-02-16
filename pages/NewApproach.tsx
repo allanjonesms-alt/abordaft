@@ -126,7 +126,7 @@ const NewApproach: React.FC = () => {
           const isAllowed = MS_CITIES_ALLOWED.some(allowedCity => city.includes(allowedCity));
 
           if (!isAllowed) {
-            alert(`ALERTA TÁTICO: Endereço em "${city}" bloqueado.\nO sistema permite apenas cadastros nas cidades de: Coxim, Sonora, Rio Verde, Pedro Gomes, Alcinópolis, Figueirão, Costa Rica ou Rio Negro.`);
+            alert(`ALERTA: Endereço em "${city}" bloqueado.\nO sistema permite apenas cadastros nas cidades de: Coxim, Sonora, Rio Verde, Pedro Gomes, Alcinópolis, Figueirão, Costa Rica ou Rio Negro.`);
             setIndividualData(prev => ({ ...prev, endereco_residencial: '' }));
             if (residentialAddressRef.current) residentialAddressRef.current.value = '';
           } else {
@@ -237,7 +237,7 @@ const NewApproach: React.FC = () => {
         await supabase.from('fotos_individuos').insert(photosPayload);
       }
 
-      alert('Registro operacional finalizado com sucesso!');
+      alert('Registro finalizado com sucesso!');
       navigate('/abordagens');
     } catch (err: any) {
       console.error(err);

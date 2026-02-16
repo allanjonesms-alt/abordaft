@@ -22,7 +22,13 @@ const App: React.FC = () => {
   useEffect(() => {
     const savedAuth = localStorage.getItem(STORAGE_KEYS.AUTH);
     if (savedAuth) {
-      setAuth(JSON.parse(savedAuth));
+      try {
+        const parsed = JSON.parse(savedAuth);
+        setAuth(parsed);
+      } catch (e) {
+        console.error("Erro ao carregar sessão:", e);
+        localStorage.removeItem(STORAGE_KEYS.AUTH);
+      }
     }
   }, []);
 
@@ -47,8 +53,9 @@ const App: React.FC = () => {
     return <Login onLogin={handleLogin} />;
   }
 
-  // Se for o primeiro acesso, força a tela de troca de senha
-  if (auth.user?.primeiro_acesso) {
+  // Só redireciona para FirstAccess se o campo for EXPLICITAMENTE false.
+  // Se for true (como no caso do admin 133613021), segue para o Dashboard.
+  if (auth.user?.primeiro_acesso === false) {
     return <FirstAccess user={auth.user} onPasswordChanged={handlePasswordChanged} />;
   }
 

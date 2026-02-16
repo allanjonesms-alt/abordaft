@@ -177,7 +177,7 @@ const ApproachesList: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div className="flex items-center space-x-3">
           <div className="bg-slate-600 p-2.5 rounded-lg shadow-lg"><i className="fas fa-list-ul text-white text-xl"></i></div>
-          <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Histórico Operacional</h2>
+          <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Histórico de Abordagens</h2>
         </div>
         <div className="relative w-full md:w-96">
           <input type="text" placeholder="Filtrar por nome, local ou VTR..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-slate-800 border border-slate-700 text-white pl-10 pr-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-slate-500 transition-all" />

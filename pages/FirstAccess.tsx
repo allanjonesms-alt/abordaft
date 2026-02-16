@@ -1,9 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { User, AuthState } from '../types';
-import { STORAGE_KEYS } from '../constants';
+import { User } from '../types';
 
 interface FirstAccessProps {
   user: User;
@@ -14,6 +12,7 @@ const FirstAccess: React.FC<FirstAccessProps> = ({ user, onPasswordChanged }) =>
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
 
   const validatePassword = (pass: string) => {
@@ -25,106 +24,125 @@ const FirstAccess: React.FC<FirstAccessProps> = ({ user, onPasswordChanged }) =>
   };
 
   const status = validatePassword(newPassword);
-  const isValid = status.hasUpper && status.hasLower && status.hasNumber && status.minLength && newPassword === confirmPassword;
+  const isValid = status.hasUpper && status.hasLower && status.hasNumber && status.minLength && newPassword !== '' && newPassword === confirmPassword;
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid) return;
+    if (!isValid || isSaving) return;
 
     setIsSaving(true);
     setError('');
 
     try {
-      const { error: updateError } = await supabase
+      if (!user.id) throw new Error("ID do usuário não identificado na sessão.");
+
+      const { data, error: updateError } = await supabase
         .from('usuarios_sgaft')
         .update({ 
           senha: newPassword,
-          primeiro_acesso: false 
+          primeiro_acesso: true 
         })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select();
 
       if (updateError) throw updateError;
+      
+      if (!data || data.length === 0) {
+        throw new Error('Falha crítica: Usuário não localizado para atualização.');
+      }
 
-      const updatedUser: User = { ...user, primeiro_acesso: false, senha: newPassword };
-      onPasswordChanged(updatedUser);
+      setIsSuccess(true);
+      
+      setTimeout(() => {
+        const updatedUser: User = { 
+          ...user, 
+          primeiro_acesso: true, 
+          senha: newPassword 
+        };
+        onPasswordChanged(updatedUser);
+      }, 1500);
+      
     } catch (err: any) {
-      setError('Erro ao atualizar credenciais: ' + err.message);
-    } finally {
+      console.error('Erro de Sincronização:', err);
+      setError('FALHA OPERACIONAL: ' + (err.message || 'Erro de rede ou permissão.'));
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-slate-800 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500">
-        <div className="bg-yellow-600 p-8 text-center">
-          <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/30">
-            <i className="fas fa-user-shield text-white text-4xl"></i>
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[40px] shadow-2xl overflow-hidden">
+        <div className="bg-yellow-600 p-10 text-center relative overflow-hidden">
+          <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-20 rotate-12 scale-150">
+            <i className="fas fa-shield-halved text-[120px]"></i>
           </div>
-          <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Primeiro Acesso</h2>
-          <p className="text-yellow-100 text-[10px] font-bold uppercase tracking-widest mt-2">Segurança Obrigatória da Força Tática</p>
+          <div className="relative z-10">
+            <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-white/30 backdrop-blur-md">
+              <i className="fas fa-lock-open text-white text-4xl"></i>
+            </div>
+            <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Troca de Senha</h2>
+            <p className="text-yellow-100 text-[10px] font-black uppercase tracking-widest mt-2">Ativação de Terminal</p>
+          </div>
         </div>
 
-        <form onSubmit={handleUpdate} className="p-8 space-y-6">
-          <p className="text-slate-400 text-xs text-center leading-relaxed">
-            Sua conta está utilizando uma senha temporária. Por questões de segurança operacional, você deve definir uma nova senha agora.
-          </p>
+        <form onSubmit={handleUpdate} className="p-8 space-y-8">
+          {isSuccess ? (
+            <div className="py-12 text-center space-y-6">
+               <div className="w-20 h-20 bg-green-600/20 rounded-full flex items-center justify-center mx-auto border border-green-500/30 animate-bounce">
+                  <i className="fas fa-check text-green-500 text-3xl"></i>
+               </div>
+               <h3 className="text-white font-black uppercase tracking-widest text-lg">Sincronizado</h3>
+            </div>
+          ) : (
+            <>
+              <div className="text-center space-y-1">
+                <p className="text-slate-400 text-[11px] font-bold uppercase tracking-tight">Primeiro acesso ou reset detectado.</p>
+                <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest">Matrícula: {user.matricula}</p>
+              </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nova Senha Tática</label>
-              <input 
-                type="password"
-                className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-4 py-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none transition-all"
-                placeholder="Mínimo 8 caracteres"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
-            </div>
+              <div className="space-y-5">
+                <input 
+                  type="password"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none"
+                  placeholder="Nova Senha"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                />
+                <input 
+                  type="password"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none"
+                  placeholder="Confirmar Nova Senha"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+              </div>
 
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Confirmar Senha</label>
-              <input 
-                type="password"
-                className="w-full bg-slate-900 border border-slate-700 rounded-2xl px-4 py-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none transition-all"
-                placeholder="Repita a nova senha"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-          </div>
+              <div className="bg-slate-950 p-5 rounded-3xl border border-slate-800 grid grid-cols-2 gap-y-3 gap-x-4">
+                <RequirementItem label="8+ Caracteres" met={status.minLength} />
+                <RequirementItem label="Maiúsculas" met={status.hasUpper} />
+                <RequirementItem label="Minúsculas" met={status.hasLower} />
+                <RequirementItem label="Números" met={status.hasNumber} />
+              </div>
 
-          <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-700 space-y-2">
-            <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Requisitos de Segurança:</h4>
-            <div className="grid grid-cols-2 gap-2">
-              <RequirementItem label="8+ Caracteres" met={status.minLength} />
-              <RequirementItem label="Letra Maiúscula" met={status.hasUpper} />
-              <RequirementItem label="Letra Minúscula" met={status.hasLower} />
-              <RequirementItem label="Número" met={status.hasNumber} />
-            </div>
-            <div className="pt-2">
-              <RequirementItem label="Senhas Coincidem" met={newPassword !== '' && newPassword === confirmPassword} />
-            </div>
-          </div>
+              {error && (
+                <div className="bg-red-600/10 border border-red-600/30 p-4 rounded-2xl text-red-500 text-[10px] font-black uppercase text-center">
+                  {error}
+                </div>
+              )}
 
-          {error && (
-            <div className="bg-red-600/10 border border-red-600/30 p-3 rounded-xl text-red-500 text-[10px] font-black uppercase text-center">
-              {error}
-            </div>
+              <button 
+                type="submit"
+                disabled={!isValid || isSaving}
+                className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${
+                  isValid ? 'bg-yellow-600 hover:bg-yellow-500 text-white' : 'bg-slate-800 text-slate-600 cursor-not-allowed'
+                }`}
+              >
+                {isSaving ? 'Gravando...' : 'Confirmar e Entrar'}
+              </button>
+            </>
           )}
-
-          <button 
-            type="submit"
-            disabled={!isValid || isSaving}
-            className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm transition-all shadow-xl flex items-center justify-center ${
-              isValid ? 'bg-yellow-600 hover:bg-yellow-500 text-white' : 'bg-slate-700 text-slate-500 cursor-not-allowed'
-            }`}
-          >
-            {isSaving ? <i className="fas fa-spinner fa-spin mr-3"></i> : <i className="fas fa-lock-open mr-3"></i>}
-            {isSaving ? 'Sincronizando...' : 'Ativar Acesso Pleno'}
-          </button>
         </form>
       </div>
     </div>
@@ -133,10 +151,10 @@ const FirstAccess: React.FC<FirstAccessProps> = ({ user, onPasswordChanged }) =>
 
 const RequirementItem: React.FC<{ label: string; met: boolean }> = ({ label, met }) => (
   <div className="flex items-center space-x-2">
-    <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${met ? 'bg-green-600 text-white' : 'bg-slate-800 text-slate-600'}`}>
+    <div className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] ${met ? 'bg-green-600 text-white' : 'bg-slate-800 text-slate-700'}`}>
       <i className={`fas ${met ? 'fa-check' : 'fa-circle'}`}></i>
     </div>
-    <span className={`text-[9px] font-bold uppercase ${met ? 'text-slate-300' : 'text-slate-600'}`}>{label}</span>
+    <span className={`text-[9px] font-bold uppercase tracking-tight ${met ? 'text-slate-300' : 'text-slate-600'}`}>{label}</span>
   </div>
 );
 

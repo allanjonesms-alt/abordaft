@@ -36,6 +36,19 @@ export interface Individual {
   fotos_individuos?: PhotoRecord[];
 }
 
+// Added missing Relationship interface used in EditIndividualModal.tsx
+export interface Relationship {
+  id: string;
+  individuo_id: string;
+  relacionado_id: string;
+  tipo: 'COMPARSA' | 'PARENTE' | 'VIZINHO';
+  created_at: string;
+  created_by?: string;
+  relacionado_nome?: string;
+  relacionado_alcunha?: string;
+}
+
+// Added missing Attachment interface used in EditIndividualModal.tsx
 export interface Attachment {
   id: string;
   individuo_id: string;
@@ -45,17 +58,6 @@ export interface Attachment {
   legenda?: string;
   created_by?: string;
   created_at: string;
-}
-
-export interface Relationship {
-  id: string;
-  individuo_id: string;
-  relacionado_id: string;
-  tipo: 'COMPARSA' | 'PARENTE' | 'VIZINHO';
-  created_at?: string;
-  created_by?: string;
-  relacionado_nome?: string;
-  relacionado_alcunha?: string;
 }
 
 export interface DBApproach {
