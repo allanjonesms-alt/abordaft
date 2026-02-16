@@ -14,33 +14,11 @@ export interface User {
 
 export interface PhotoRecord {
   id: string;
-  path: string; // base64 ou url
+  path: string;
   is_primary: boolean;
   individuo_id?: string;
   sort_order?: number;
   created_at?: string;
-}
-
-export interface Attachment {
-  id: string;
-  individuo_id: string;
-  nome_arquivo: string;
-  tipo_mime: string;
-  path: string;
-  legenda?: string;
-  created_by: string;
-  created_at: string;
-}
-
-export interface Relationship {
-  id: string;
-  individuo_id: string;
-  relacionado_id: string;
-  tipo: 'COMPARSA' | 'PARENTE' | 'VIZINHO';
-  created_by: string;
-  created_at: string;
-  relacionado_nome?: string; // Para exibição na UI
-  relacionado_alcunha?: string;
 }
 
 export interface Individual {
@@ -52,23 +30,49 @@ export interface Individual {
   mae?: string;
   endereco?: string;
   faccao?: string;
-  fotos_individuos?: PhotoRecord[];
-  individuos_anexos?: Attachment[];
-  relacionamentos?: Relationship[];
   created_at?: string;
   updated_at?: string;
+  // @fix: Adding missing fotos_individuos property to the Individual interface
+  fotos_individuos?: PhotoRecord[];
 }
 
-export interface Approach {
+// @fix: Adding missing Attachment interface
+export interface Attachment {
+  id: string;
+  individuo_id: string;
+  nome_arquivo: string;
+  tipo_mime: string;
+  path: string;
+  legenda?: string;
+  created_by?: string;
+  created_at: string;
+}
+
+// @fix: Adding missing Relationship interface
+export interface Relationship {
+  id: string;
+  individuo_id: string;
+  relacionado_id: string;
+  tipo: 'COMPARSA' | 'PARENTE' | 'VIZINHO';
+  created_at?: string;
+  created_by?: string;
+  relacionado_nome?: string;
+  relacionado_alcunha?: string;
+}
+
+export interface DBApproach {
   id: string;
   data: string;
   horario: string;
   local: string;
   vtr: string;
-  equipe: string[];
-  individuosId: string[];
-  objetosApreendidos?: string;
   relatorio: string;
+  objetos_apreendidos?: string;
+  resultado?: string;
+  individuo_nome?: string;
+  individuo_id?: string;
+  created_at?: string;
+  foto_path?: string;
 }
 
 export interface AuthState {
