@@ -60,6 +60,17 @@ export interface EditIndividualModalProps {
   currentUser: User | null;
 }
 
+const GOOGLE_MAPS_API_KEY = 'AIzaSyCitBS_zUZ0485b8KS6G0dOzTFsWv1XH4s';
+
+const MS_CITIES_ALLOWED = [
+  'COXIM', 'SONORA', 'RIO VERDE DE MATO GROSSO', 'RIO VERDE DE MT', 
+  'PEDRO GOMES', 'ALCINÓPOLIS', 'FIGUEIRÃO', 'COSTA RICA', 'RIO NEGRO'
+];
+
+const NORTH_MS_BOUNDS = {
+  north: -17.50, south: -19.80, east: -52.50, west: -55.50,
+};
+
 const FACCOES_OPTIONS = [
   { value: '', label: 'Selecione:' },
   { value: 'PCC', label: 'PCC (Primeiro Comando da Capital)' },
@@ -85,12 +96,56 @@ const EditIndividualModal: React.FC<EditIndividualModalProps> = ({ individual, o
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(initialIndex !== -1 ? initialIndex : 0);
   
   const attachmentInputRef = useRef<HTMLInputElement>(null);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const autocompleteInstance = useRef<any>(null);
 
   useEffect(() => {
     fetchRelationships();
     fetchAttachments();
     fetchApproachesHistory();
+    initAutocompleteIfPossible();
   }, [individual.id]);
+
+  const initAutocompleteIfPossible = () => {
+    if (!addressInputRef.current || !(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) return;
+
+    try {
+      const google = (window as any).google;
+      const options = {
+        componentRestrictions: { country: "br" },
+        fields: ['formatted_address', 'address_components', 'geometry'],
+        types: ['address'],
+        locationRestriction: NORTH_MS_BOUNDS,
+        strictBounds: true
+      };
+
+      autocompleteInstance.current = new google.maps.places.Autocomplete(
+        addressInputRef.current, 
+        options
+      );
+
+      autocompleteInstance.current.addListener('place_changed', () => {
+        const place = autocompleteInstance.current.getPlace();
+        if (!place.address_components) return;
+
+        const cityComponent = place.address_components.find((c: any) => 
+          c.types.includes('administrative_area_level_2') || c.types.includes('locality')
+        );
+        const city = cityComponent?.long_name?.toUpperCase() || '';
+        const isAllowed = MS_CITIES_ALLOWED.some(allowedCity => city.includes(allowedCity));
+
+        if (!isAllowed) {
+          alert(`ALERTA: Endereço fora da jurisdição regional bloqueado.`);
+          setFormData(prev => ({ ...prev, endereco: '' }));
+          if (addressInputRef.current) addressInputRef.current.value = '';
+        } else {
+          setFormData(prev => ({ ...prev, endereco: place.formatted_address }));
+        }
+      });
+    } catch (err) {
+      console.error("Erro no Autocomplete:", err);
+    }
+  };
 
   const fetchRelationships = async () => {
     const { data } = await supabase
@@ -182,11 +237,11 @@ const EditIndividualModal: React.FC<EditIndividualModalProps> = ({ individual, o
     setIsSaving(true);
     try {
       const { error } = await supabase.from('individuos').update({
-        nome: formData.nome, 
+        nome: formData.nome.toUpperCase(), 
         alcunha: formData.alcunha, 
         faccao: formData.faccao, 
         documento: formData.documento,
-        mae: formData.mae,
+        mae: formData.mae.toUpperCase(),
         endereco: formData.endereco,
         data_nascimento: formData.data_nascimento, 
         updated_at: new Date().toISOString()
@@ -286,12 +341,20 @@ const EditIndividualModal: React.FC<EditIndividualModalProps> = ({ individual, o
                   </div>
 
                   <div className="col-span-2">
-                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Endereço Residencial</label>
-                      <input type="text" className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-600 transition-all font-bold" value={formData.endereco || ''} onChange={e => setFormData({...formData, endereco: e.target.value})} placeholder="Rua, Número, Bairro, Cidade" />
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Endereço Residencial (Google Autocomplete)</label>
+                      <div className="relative group">
+                        <input 
+                          type="text" 
+                          ref={addressInputRef}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-600 transition-all font-bold" 
+                          defaultValue={formData.endereco || ''} 
+                          placeholder="Rua, Número, Bairro, Cidade" 
+                        />
+                        <i className="fas fa-search-location absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-yellow-600"></i>
+                      </div>
                   </div>
                 </div>
 
-                {/* Outros Anexos */}
                 <div className="space-y-4 pt-4 border-t border-slate-700">
                 <div className="flex items-center justify-between mb-2">
                     <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Documentos em Anexo</h4>
@@ -321,7 +384,6 @@ const EditIndividualModal: React.FC<EditIndividualModalProps> = ({ individual, o
                 </div>
                 </div>
 
-                {/* Histórico de Abordagens */}
                 <div className="space-y-4 pt-4 border-t border-slate-700">
                 <div className="flex items-center justify-between mb-2">
                     <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Histórico de Abordagens</h4>
