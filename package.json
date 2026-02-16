@@ -3,17 +3,23 @@
   "name": "sgaft-forca-tatica",
   "version": "2.0.0",
   "private": true,
-  "description": "SGAFT - Sistema de Gerenciamento de Abordagem da Força Tática",
+  "type": "module",
   "scripts": {
-    "start": "serve .",
-    "build": "mkdir -p public && cp -rf index.html index.tsx App.tsx types.ts constants.ts metadata.json components pages lib sql public/"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "keywords": [
-    "tactical",
-    "police",
-    "management",
-    "react"
-  ],
-  "author": "SGT Jones",
-  "license": "MIT"
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.0",
+    "@supabase/supabase-js": "^2.48.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
 }
