@@ -8,9 +8,8 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  // Pre-filled values for temporary editing purposes
-  const [matricula, setMatricula] = useState('133613021');
-  const [senha, setSenha] = useState('@Jones2028');
+  const [matricula, setMatricula] = useState('');
+  const [senha, setSenha] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -20,7 +19,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
-      // Consulta na tabela usuarios_sgaft filtrando por matricula e senha
       const { data, error: dbError } = await supabase
         .from('usuarios_sgaft')
         .select('*')
@@ -31,13 +29,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (dbError || !data) {
         setError('Matrícula ou senha incorretos.');
       } else {
-        // Mapeia o registro do banco para o tipo User do app
         const loggedUser: User = {
           id: data.id,
           matricula: data.matricula,
           nome: data.nome || 'Usuário Tático',
           senha: data.senha,
-          role: data.role === 'admin' ? UserRole.ADMIN : UserRole.OPERATOR
+          role: data.role === 'admin' ? UserRole.ADMIN : UserRole.OPERATOR,
+          primeiro_acesso: data.primeiro_acesso ?? true
         };
         onLogin(loggedUser);
       }
@@ -77,7 +75,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={matricula}
                   onChange={(e) => setMatricula(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 text-white pl-10 pr-4 py-3 rounded-xl focus:ring-2 focus:ring-yellow-600 focus:border-transparent outline-none transition-all"
-                  placeholder="Ex: 123456"
+                  placeholder="Informe sua Matrícula"
                   required
                 />
               </div>
@@ -127,10 +125,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <div className="mt-8 text-center space-y-1">
             <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">
-              VERSÃO 2.0
+              VERSÃO 2.1
             </p>
             <p className="text-slate-600 text-[9px] font-bold uppercase tracking-tighter">
-              CREATED BY SGT JONES
+              SISTEMA DE SEGURANÇA OPERACIONAL
             </p>
           </div>
         </div>

@@ -10,6 +10,7 @@ export interface User {
   nome: string;
   senha: string;
   role: UserRole;
+  primeiro_acesso: boolean;
 }
 
 export interface PhotoRecord {
@@ -32,11 +33,9 @@ export interface Individual {
   faccao?: string;
   created_at?: string;
   updated_at?: string;
-  // @fix: Adding missing fotos_individuos property to the Individual interface
   fotos_individuos?: PhotoRecord[];
 }
 
-// @fix: Adding missing Attachment interface
 export interface Attachment {
   id: string;
   individuo_id: string;
@@ -48,7 +47,6 @@ export interface Attachment {
   created_at: string;
 }
 
-// @fix: Adding missing Relationship interface
 export interface Relationship {
   id: string;
   individuo_id: string;

@@ -11,6 +11,7 @@ import ApproachesList from './pages/ApproachesList';
 import IndividualsList from './pages/IndividualsList';
 import Gallery from './pages/Gallery';
 import Settings from './pages/Settings';
+import FirstAccess from './pages/FirstAccess';
 
 const App: React.FC = () => {
   const [auth, setAuth] = useState<AuthState>({
@@ -36,8 +37,19 @@ const App: React.FC = () => {
     localStorage.removeItem(STORAGE_KEYS.AUTH);
   };
 
+  const handlePasswordChanged = (updatedUser: User) => {
+    const newAuth = { user: updatedUser, isAuthenticated: true };
+    setAuth(newAuth);
+    localStorage.setItem(STORAGE_KEYS.AUTH, JSON.stringify(newAuth));
+  };
+
   if (!auth.isAuthenticated) {
     return <Login onLogin={handleLogin} />;
+  }
+
+  // Se for o primeiro acesso, força a tela de troca de senha
+  if (auth.user?.primeiro_acesso) {
+    return <FirstAccess user={auth.user} onPasswordChanged={handlePasswordChanged} />;
   }
 
   return (
