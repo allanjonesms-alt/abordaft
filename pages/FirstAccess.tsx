@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
+import TacticalLogo from '../components/TacticalLogo';
 
 interface FirstAccessProps {
   user: User;
@@ -74,11 +75,11 @@ const FirstAccess: React.FC<FirstAccessProps> = ({ user, onPasswordChanged }) =>
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[40px] shadow-2xl overflow-hidden">
         <div className="bg-yellow-600 p-10 text-center relative overflow-hidden">
           <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-20 rotate-12 scale-150">
-            <i className="fas fa-shield-halved text-[120px]"></i>
+             <TacticalLogo className="w-[300px] h-[300px]" />
           </div>
           <div className="relative z-10">
-            <div className="w-20 h-20 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-white/30 backdrop-blur-md">
-              <i className="fas fa-lock-open text-white text-4xl"></i>
+            <div className="w-24 h-24 bg-white/20 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-white/30 backdrop-blur-md overflow-hidden">
+              <TacticalLogo size="lg" />
             </div>
             <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Troca de Senha</h2>
             <p className="text-yellow-100 text-[10px] font-black uppercase tracking-widest mt-2">Ativação de Terminal</p>

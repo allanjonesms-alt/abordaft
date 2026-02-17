@@ -1,6 +1,8 @@
+
 import React, { useState } from 'react';
 import { User, UserRole } from '../types';
 import { supabase } from '../lib/supabase';
+import TacticalLogo from '../components/TacticalLogo';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -18,7 +20,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
-      // Consulta na tabela de usuários cadastrados
       const { data, error: dbError } = await supabase
         .from('usuarios_sgaft')
         .select('*')
@@ -29,7 +30,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (dbError || !data) {
         setError('Matrícula ou senha incorretos.');
       } else {
-        // Normalização do status de primeiro acesso (converte variações de true/false)
         const rawVal = data.primeiro_acesso;
         const normalizedPrimeiroAcesso = (
           rawVal === true || 
@@ -41,7 +41,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           rawVal === '1'
         );
 
-        // Identificação do Perfil (ADMIN ou OPERATOR)
         const rawRole = String(data.role || '').toUpperCase();
         const role = rawRole === 'ADMIN' ? UserRole.ADMIN : UserRole.OPERATOR;
 
@@ -71,9 +70,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="relative z-10 w-full max-w-md">
         <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl backdrop-blur-xl">
           <div className="flex flex-col items-center mb-10">
-            <div className="bg-yellow-600 p-5 rounded-3xl mb-6 shadow-xl shadow-yellow-600/20 rotate-3">
-              <i className="fas fa-shield-halved text-white text-5xl"></i>
-            </div>
+            <TacticalLogo size="xl" className="mb-6 rotate-3" />
             <h1 className="text-4xl font-black text-white tracking-tighter">SGAFT</h1>
             <p className="text-slate-500 mt-2 font-black uppercase text-[10px] tracking-[0.3em]">Força Tática - Gestão Operacional</p>
           </div>
@@ -142,7 +139,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <div className="mt-12 text-center">
             <p className="text-slate-700 text-[9px] font-black uppercase tracking-[0.4em]">
-              SGAFT V2.5.5 • CREATED BY ALLAN JONES
+              SGAFT V2.7 • CREATED BY ALLAN JONES
             </p>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { User, UserRole, Shift } from '../types';
 import { supabase } from '../lib/supabase';
 import ChangePasswordModal from './ChangePasswordModal';
 import StartShiftModal from './StartShiftModal';
+import TacticalLogo from './TacticalLogo';
 
 interface HeaderProps {
   user: User | null;
@@ -32,7 +33,6 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
 
   useEffect(() => {
     fetchActiveShift();
-    // Poll a cada 30 segundos para manter status atualizado entre terminais
     const interval = setInterval(fetchActiveShift, 30000);
     return () => clearInterval(interval);
   }, [fetchActiveShift]);
@@ -81,15 +81,12 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
             </button>
             
             <Link to="/" className="flex items-center space-x-2 group">
-              <div className="bg-yellow-600 p-1.5 rounded-md group-hover:bg-yellow-500 transition-colors">
-                <i className="fas fa-shield-halved text-white text-xl"></i>
-              </div>
+              <TacticalLogo size="md" className="group-hover:scale-110 transition-transform" />
               <h1 className="text-2xl font-black tracking-tighter text-white">SGAFT</h1>
             </Link>
           </div>
 
           <div className="flex items-center space-x-2 md:space-x-4">
-            {/* Controle de Serviço */}
             {activeShift ? (
               <div className="flex items-center bg-slate-900 rounded-xl border border-slate-700 px-3 py-1.5 gap-3">
                 <div className="flex flex-col items-end hidden sm:flex">

@@ -3,8 +3,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import LocationPickerModal from '../components/LocationPickerModal';
+import TacticalAlert from '../components/TacticalAlert';
 import { maskCPF, validateCPF } from '../lib/utils';
-import { Shift } from '../types';
+import { Shift, User, UserRole } from '../types';
 
 interface PhotoRecordUI {
   id: string;
@@ -12,29 +13,24 @@ interface PhotoRecordUI {
   isPrincipal: boolean;
 }
 
+interface NewApproachProps {
+  user: User | null;
+}
+
 const FACCOES_OPTIONS = [
   { value: '', label: 'Nenhuma / Não Informada' },
   { value: 'PCC', label: 'PCC (Primeiro Comando da Capital)' },
   { value: 'CV', label: 'CV (Comando Vermelho)' },
   { value: 'TCP', label: 'TCP (Terceiro Comando Puro)' },
-  { value: 'GDE', label: 'GDE (Guardiões do Estado)' },
+  { value: 'GDE', label: 'GDE (Guardioes do Estado)' },
   { value: 'BDM', label: 'BDM (Bonde do Maluco)' },
   { value: 'SDC', label: 'SDC (Sindicato do Crime)' },
   { value: 'FDN', label: 'FDN (Família do Norte)' }
 ];
 
-const MS_CITIES_ALLOWED = [
-  'COXIM', 'SONORA', 'RIO VERDE DE MATO GROSSO', 'RIO VERDE DE MT', 
-  'PEDRO GOMES', 'ALCINÓPOLIS', 'FIGUEIRÃO', 'COSTA RICA', 'RIO NEGRO'
-];
-
-const NORTH_MS_BOUNDS = {
-  north: -17.50, south: -19.80, east: -52.50, west: -55.50,
-};
-
 const GOOGLE_MAPS_API_KEY = 'AIzaSyCitBS_zUZ0485b8KS6G0dOzTFsWv1XH4s';
 
-const NewApproach: React.FC = () => {
+const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const residentialAddressRef = useRef<HTMLInputElement>(null);
@@ -42,6 +38,7 @@ const NewApproach: React.FC = () => {
 
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [checkingShift, setCheckingShift] = useState(true);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   const [approachData, setApproachData] = useState({
     data: '',
@@ -72,20 +69,47 @@ const NewApproach: React.FC = () => {
         .from('servicos_vtr')
         .select('*')
         .eq('status', 'ATIVO')
+        .order('horario_inicio', { ascending: false })
         .limit(1)
         .maybeSingle();
       
-      if (!data || error) {
-        alert('BLOQUEIO TÁTICO: Você não possui um serviço ativo. Redirecionando...');
-        navigate('/');
+      const isUserInShift = (userName: string | undefined, shift: Shift | null) => {
+        if (!userName || !shift) return false;
+        const name = userName.toUpperCase();
+        return (
+          shift.comandante?.toUpperCase() === name ||
+          shift.motorista?.toUpperCase() === name ||
+          shift.patrulheiro_1?.toUpperCase() === name ||
+          shift.patrulheiro_2?.toUpperCase() === name
+        );
+      };
+
+      const isAdmin = user?.role === UserRole.ADMIN;
+
+      if (isAdmin) {
+        if (data) {
+          setActiveShift(data);
+          setApproachData(prev => ({ ...prev, vtr: data.placa_vtr }));
+        } else {
+          setApproachData(prev => ({ ...prev, vtr: 'ADMIN-REG' }));
+        }
+        setCheckingShift(false);
       } else {
-        setActiveShift(data);
-        setApproachData(prev => ({ ...prev, vtr: data.placa_vtr }));
+        if (!data || error) {
+          setAlertMessage('BLOQUEIO TÁTICO: Você não possui um serviço ativo. Redirecionando...');
+          setTimeout(() => navigate('/'), 3000);
+        } else if (!isUserInShift(user?.nome, data)) {
+          setAlertMessage('VIOLAÇÃO DE ACESSO: Você não está escalado neste serviço. Acesso negado.');
+          setTimeout(() => navigate('/'), 3000);
+        } else {
+          setActiveShift(data);
+          setApproachData(prev => ({ ...prev, vtr: data.placa_vtr }));
+          setCheckingShift(false);
+        }
       }
-      setCheckingShift(false);
     };
     checkActiveShift();
-  }, [navigate]);
+  }, [navigate, user]);
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -111,65 +135,57 @@ const NewApproach: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  const initAutocomplete = () => {
+    if (!residentialAddressRef.current || !(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) return;
+
+    try {
+      const google = (window as any).google;
+      const options = {
+        componentRestrictions: { country: "br" },
+        fields: ['formatted_address', 'address_components', 'geometry'],
+        types: ['address']
+      };
+
+      autocompleteInstance.current = new google.maps.places.Autocomplete(
+        residentialAddressRef.current, 
+        options
+      );
+
+      autocompleteInstance.current.addListener('place_changed', () => {
+        const place = autocompleteInstance.current.getPlace();
+        if (!place.formatted_address) return;
+        setIndividualData(prev => ({ ...prev, endereco_residencial: place.formatted_address }));
+      });
+    } catch (err) {
+      console.error("Erro ao inicializar Autocomplete:", err);
+    }
+  };
+
   useEffect(() => {
-    if (checkingShift || !activeShift) return;
+    if (checkingShift) return;
 
-    const initAutocomplete = () => {
-      if (!residentialAddressRef.current || !(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) return;
-
-      try {
-        const google = (window as any).google;
-        const options = {
-          componentRestrictions: { country: "br" },
-          fields: ['formatted_address', 'address_components', 'geometry'],
-          types: ['address'],
-          locationRestriction: NORTH_MS_BOUNDS,
-          strictBounds: true
-        };
-
-        autocompleteInstance.current = new google.maps.places.Autocomplete(
-          residentialAddressRef.current, 
-          options
-        );
-
-        autocompleteInstance.current.addListener('place_changed', () => {
-          const place = autocompleteInstance.current.getPlace();
-          if (!place.address_components) return;
-
-          const cityComponent = place.address_components.find((c: any) => 
-            c.types.includes('administrative_area_level_2') || c.types.includes('locality')
-          );
-          const city = cityComponent?.long_name?.toUpperCase() || '';
-          const isAllowed = MS_CITIES_ALLOWED.some(allowedCity => city.includes(allowedCity));
-
-          if (!isAllowed) {
-            alert(`ALERTA: Endereço em "${city}" bloqueado.`);
-            setIndividualData(prev => ({ ...prev, endereco_residencial: '' }));
-            if (residentialAddressRef.current) residentialAddressRef.current.value = '';
-          } else {
-            setIndividualData(prev => ({ ...prev, endereco_residencial: place.formatted_address }));
-          }
-        });
-      } catch (err) {
-        console.error("Erro ao inicializar Autocomplete:", err);
-      }
-    };
-
-    const loadScript = () => {
+    const loadScriptAndInit = () => {
       if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) {
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
-        script.async = true;
-        script.defer = true;
-        script.onload = initAutocomplete;
-        document.head.appendChild(script);
+        const scriptId = 'google-maps-script-new-approach';
+        if (!document.getElementById(scriptId)) {
+          const script = document.createElement('script');
+          script.id = scriptId;
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
+          script.async = true;
+          script.defer = true;
+          script.onload = initAutocomplete;
+          document.head.appendChild(script);
+        }
       } else {
         initAutocomplete();
       }
     };
 
-    loadScript();
-  }, [checkingShift, activeShift]);
+    loadScriptAndInit();
+    // Pequeno delay para garantir que o ref está disponível após render
+    const timer = setTimeout(initAutocomplete, 500);
+    return () => clearTimeout(timer);
+  }, [checkingShift]);
 
   const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -211,7 +227,6 @@ const NewApproach: React.FC = () => {
     e.preventDefault();
     if (!individualData.nome) return alert('Nome do abordado é obrigatório.');
     if (!approachData.local) return alert('Localização da abordagem é obrigatória.');
-    if (!activeShift) return alert('Serviço expirado ou encerrado.');
 
     setIsSaving(true);
     try {
@@ -241,7 +256,7 @@ const NewApproach: React.FC = () => {
           objetos_apreendidos: approachData.objetos,
           individuo_id: newInd.id,
           individuo_nome: individualData.nome,
-          relatorio: `Abordagem tática registrada. VTR: ${approachData.vtr}. Guarnição: Comandante ${activeShift.comandante}, Motorista ${activeShift.motorista}.`
+          relatorio: `Abordagem registrada via Terminal SGAFT. VTR: ${approachData.vtr}.`
         }]);
 
       if (appError) throw appError;
@@ -270,8 +285,9 @@ const NewApproach: React.FC = () => {
   if (checkingShift) {
     return (
       <div className="flex flex-col items-center justify-center py-40">
+        {alertMessage && <TacticalAlert message={alertMessage} onClose={() => setAlertMessage(null)} />}
         <i className="fas fa-satellite-dish fa-spin text-blue-600 text-5xl mb-6"></i>
-        <p className="text-white font-black uppercase tracking-widest text-xs">Validando Credenciais de Turno...</p>
+        <p className="text-white font-black uppercase tracking-widest text-xs">Sincronizando Terminal...</p>
       </div>
     );
   }
@@ -285,11 +301,13 @@ const NewApproach: React.FC = () => {
           </div>
           <div>
             <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Nova Abordagem</h2>
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2">VTR: {activeShift?.placa_vtr} • CMD: {activeShift?.comandante}</p>
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2">
+              VTR: {approachData.vtr} {activeShift ? `• CMD: ${activeShift.comandante}` : '• REGISTRO ADMIN'}
+            </p>
           </div>
         </div>
         <div className="hidden sm:block bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl">
-           <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Serviço Verificado</span>
+           <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Sessão Segura</span>
         </div>
       </div>
 
@@ -327,9 +345,11 @@ const NewApproach: React.FC = () => {
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Viatura Utilizada</label>
               <input 
                 type="text" 
-                className="w-full bg-slate-900 border border-slate-700 text-slate-500 p-4 rounded-2xl outline-none font-bold text-sm" 
+                className={`w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 outline-none font-bold text-sm ${activeShift ? 'text-slate-500' : 'text-white'}`} 
                 value={approachData.vtr} 
-                readOnly
+                readOnly={!!activeShift}
+                onChange={e => !activeShift && setApproachData({...approachData, vtr: e.target.value.toUpperCase()})}
+                placeholder="PLACA OU PREFIXO"
               />
             </div>
 
@@ -379,7 +399,16 @@ const NewApproach: React.FC = () => {
 
             <div className="md:col-span-2">
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Residência</label>
-              <input type="text" ref={residentialAddressRef} className="w-full bg-slate-900 border border-slate-700 text-white px-4 py-4 rounded-2xl outline-none font-bold text-sm" placeholder="Buscar endereço..." defaultValue={individualData.endereco_residencial} />
+              <div className="relative group">
+                <input 
+                  type="text" 
+                  ref={residentialAddressRef} 
+                  className="w-full bg-slate-900 border border-slate-700 text-white pl-10 pr-4 py-4 rounded-2xl outline-none focus:ring-2 focus:ring-yellow-600 transition-all font-bold text-sm" 
+                  placeholder="Buscar endereço..." 
+                  defaultValue={individualData.endereco_residencial} 
+                />
+                <i className="fas fa-search-location absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-yellow-600 transition-all"></i>
+              </div>
             </div>
 
             <div>

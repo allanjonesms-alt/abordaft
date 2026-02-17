@@ -62,21 +62,12 @@ export interface EditIndividualModalProps {
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyCitBS_zUZ0485b8KS6G0dOzTFsWv1XH4s';
 
-const MS_CITIES_ALLOWED = [
-  'COXIM', 'SONORA', 'RIO VERDE DE MATO GROSSO', 'RIO VERDE DE MT', 
-  'PEDRO GOMES', 'ALCINÓPOLIS', 'FIGUEIRÃO', 'COSTA RICA', 'RIO NEGRO'
-];
-
-const NORTH_MS_BOUNDS = {
-  north: -17.50, south: -19.80, east: -52.50, west: -55.50,
-};
-
 const FACCOES_OPTIONS = [
   { value: '', label: 'Selecione:' },
   { value: 'PCC', label: 'PCC (Primeiro Comando da Capital)' },
   { value: 'CV', label: 'CV (Comando Vermelho)' },
   { value: 'TCP', label: 'TCP (Terceiro Comando Puro)' },
-  { value: 'GDE', label: 'GDE (Guardiões do Estado)' },
+  { value: 'GDE', label: 'GDE (Guardioes do Estado)' },
   { value: 'BDM', label: 'BDM (Bonde do Maluco)' },
   { value: 'SDC', label: 'SDC (Sindicato do Crime)' },
   { value: 'FDN', label: 'FDN (Família do Norte)' }
@@ -99,14 +90,7 @@ const EditIndividualModal: React.FC<EditIndividualModalProps> = ({ individual, o
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteInstance = useRef<any>(null);
 
-  useEffect(() => {
-    fetchRelationships();
-    fetchAttachments();
-    fetchApproachesHistory();
-    initAutocompleteIfPossible();
-  }, [individual.id]);
-
-  const initAutocompleteIfPossible = () => {
+  const initAutocomplete = () => {
     if (!addressInputRef.current || !(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) return;
 
     try {
@@ -114,9 +98,7 @@ const EditIndividualModal: React.FC<EditIndividualModalProps> = ({ individual, o
       const options = {
         componentRestrictions: { country: "br" },
         fields: ['formatted_address', 'address_components', 'geometry'],
-        types: ['address'],
-        locationRestriction: NORTH_MS_BOUNDS,
-        strictBounds: true
+        types: ['address']
       };
 
       autocompleteInstance.current = new google.maps.places.Autocomplete(
@@ -126,26 +108,40 @@ const EditIndividualModal: React.FC<EditIndividualModalProps> = ({ individual, o
 
       autocompleteInstance.current.addListener('place_changed', () => {
         const place = autocompleteInstance.current.getPlace();
-        if (!place.address_components) return;
-
-        const cityComponent = place.address_components.find((c: any) => 
-          c.types.includes('administrative_area_level_2') || c.types.includes('locality')
-        );
-        const city = cityComponent?.long_name?.toUpperCase() || '';
-        const isAllowed = MS_CITIES_ALLOWED.some(allowedCity => city.includes(allowedCity));
-
-        if (!isAllowed) {
-          alert(`ALERTA: Endereço fora da jurisdição regional bloqueado.`);
-          setFormData(prev => ({ ...prev, endereco: '' }));
-          if (addressInputRef.current) addressInputRef.current.value = '';
-        } else {
-          setFormData(prev => ({ ...prev, endereco: place.formatted_address }));
-        }
+        if (!place.formatted_address) return;
+        setFormData(prev => ({ ...prev, endereco: place.formatted_address }));
       });
     } catch (err) {
       console.error("Erro no Autocomplete:", err);
     }
   };
+
+  useEffect(() => {
+    fetchRelationships();
+    fetchAttachments();
+    fetchApproachesHistory();
+
+    const loadScriptAndInit = () => {
+      if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) {
+        const scriptId = 'google-maps-script-edit-individual';
+        if (!document.getElementById(scriptId)) {
+          const script = document.createElement('script');
+          script.id = scriptId;
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
+          script.async = true;
+          script.defer = true;
+          script.onload = initAutocomplete;
+          document.head.appendChild(script);
+        }
+      } else {
+        initAutocomplete();
+      }
+    };
+
+    loadScriptAndInit();
+    const timer = setTimeout(initAutocomplete, 1000);
+    return () => clearTimeout(timer);
+  }, [individual.id]);
 
   const fetchRelationships = async () => {
     const { data } = await supabase

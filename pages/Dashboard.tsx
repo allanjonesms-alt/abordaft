@@ -1,8 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, UserRole } from '../types';
+import { User, UserRole, Shift } from '../types';
 import { supabase } from '../lib/supabase';
+import TacticalLogo from '../components/TacticalLogo';
+import TacticalAlert from '../components/TacticalAlert';
 
 interface DashboardProps {
   user: User | null;
@@ -31,7 +33,7 @@ const MenuButton: React.FC<{
         {content}
         <h3 className="text-xl font-black text-slate-500 mb-2 uppercase tracking-tight">{label}</h3>
         <p className="text-slate-600 text-sm leading-relaxed">{description}</p>
-        <div className="absolute top-4 right-4 text-[8px] font-black text-red-500 uppercase tracking-widest border border-red-500/20 px-2 py-0.5 rounded bg-red-500/5">Inativo</div>
+        <div className="absolute top-4 right-4 text-[8px] font-black text-red-500 uppercase tracking-widest border border-red-500/20 px-2 py-0.5 rounded bg-red-500/5">Bloqueado</div>
       </div>
     );
   }
@@ -59,34 +61,69 @@ const MenuButton: React.FC<{
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ user }) => {
-  const [hasActiveShift, setHasActiveShift] = useState(false);
+  const [activeShift, setActiveShift] = useState<Shift | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const checkShift = async () => {
       const { data } = await supabase
         .from('servicos_vtr')
-        .select('id')
+        .select('*')
         .eq('status', 'ATIVO')
+        .order('horario_inicio', { ascending: false })
         .limit(1)
         .maybeSingle();
-      setHasActiveShift(!!data);
+      setActiveShift(data);
     };
     checkShift();
     const interval = setInterval(checkShift, 10000);
     return () => clearInterval(interval);
   }, []);
 
+  const isUserInShift = (userName: string | undefined, shift: Shift | null) => {
+    if (!userName || !shift) return false;
+    const name = userName.toUpperCase();
+    return (
+      shift.comandante?.toUpperCase() === name ||
+      shift.motorista?.toUpperCase() === name ||
+      shift.patrulheiro_1?.toUpperCase() === name ||
+      shift.patrulheiro_2?.toUpperCase() === name
+    );
+  };
+
+  const isAdmin = user?.role === UserRole.ADMIN;
+  const inShift = isUserInShift(user?.nome, activeShift);
+  const canRegisterApproach = isAdmin || inShift;
+
   const handleApproachClick = () => {
-    if (!hasActiveShift) {
-      alert('ATENÇÃO OPERADOR:\nNão é possível registrar abordagem sem um SERVIÇO ATIVO.\nPor favor, INICIE O SERVIÇO no botão verde do cabeçalho.');
-    } else {
+    if (isAdmin) {
       navigate('/nova-abordagem');
+      return;
     }
+
+    if (!activeShift) {
+      setAlertMessage('Não é possível registrar abordagem sem um SERVIÇO ATIVO. Inicie o serviço no cabeçalho.');
+      return;
+    }
+    
+    if (!inShift) {
+      setAlertMessage('Acesso Negado: Você não consta como integrante da guarnição deste serviço ativo.');
+      return;
+    }
+
+    navigate('/nova-abordagem');
   };
 
   return (
     <div className="max-w-5xl mx-auto py-8">
+      {alertMessage && (
+        <TacticalAlert 
+          message={alertMessage} 
+          onClose={() => setAlertMessage(null)} 
+        />
+      )}
+
       <div className="mb-10 animate-fade-in flex items-center justify-between">
           <div>
             <h2 className="text-white text-3xl font-black uppercase tracking-tighter">Terminal de Operações</h2>
@@ -106,7 +143,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           label="Nova Abordagem"
           colorClass="bg-blue-600"
           description="Registrar nova abordagem policial em campo."
-          disabled={!hasActiveShift}
+          disabled={!canRegisterApproach && !!activeShift}
         />
         <MenuButton
           to="/abordagens"
@@ -143,7 +180,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         )}
       </div>
 
-      {!hasActiveShift && (
+      {!activeShift && !isAdmin && (
         <div className="mt-8 p-6 bg-red-600/10 border border-red-500/30 rounded-2xl flex items-center gap-4">
           <div className="bg-red-600 w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 animate-pulse">
             <i className="fas fa-exclamation-triangle text-white text-xl"></i>
@@ -157,11 +194,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         </div>
       )}
 
+      {activeShift && !canRegisterApproach && (
+        <div className="mt-8 p-6 bg-yellow-600/10 border border-yellow-500/30 rounded-2xl flex items-center gap-4">
+          <div className="bg-yellow-600 w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0">
+            <i className="fas fa-lock text-white text-xl"></i>
+          </div>
+          <div>
+            <h4 className="text-yellow-500 font-black uppercase text-xs tracking-widest">Acesso Limitado</h4>
+            <p className="text-slate-400 text-[10px] mt-1 uppercase font-bold leading-relaxed">
+              Serviço em andamento na VTR <span className="text-white">{activeShift.placa_vtr}</span>. Como você não faz parte desta guarnição, seu acesso para novos registros está bloqueado por diretriz tática.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="mt-8 p-6 bg-slate-800/50 rounded-2xl border border-slate-700/50 border-dashed">
         <div className="flex items-center space-x-4">
-          <div className="bg-slate-700 p-3 rounded-xl">
-            <i className="fas fa-shield-halved text-yellow-600"></i>
-          </div>
+          <TacticalLogo size="md" className="opacity-80" />
           <div>
             <h4 className="text-slate-300 font-bold uppercase text-xs tracking-widest">Status da Conexão</h4>
             <p className="text-slate-500 text-[10px] mt-1 uppercase font-black">

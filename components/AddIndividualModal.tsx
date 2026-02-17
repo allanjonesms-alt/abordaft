@@ -17,12 +17,6 @@ interface AttachmentUI {
   data: string;
 }
 
-interface RelationshipUI {
-  relacionado_id: string;
-  nome: string;
-  tipo: 'COMPARSA' | 'PARENTE' | 'VIZINHO';
-}
-
 interface AddIndividualModalProps {
   currentUser: AppUser | null;
   onClose: () => void;
@@ -31,21 +25,12 @@ interface AddIndividualModalProps {
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyCitBS_zUZ0485b8KS6G0dOzTFsWv1XH4s';
 
-const MS_CITIES_ALLOWED = [
-  'COXIM', 'SONORA', 'RIO VERDE DE MATO GROSSO', 'RIO VERDE DE MT', 
-  'PEDRO GOMES', 'ALCINÓPOLIS', 'FIGUEIRÃO', 'COSTA RICA', 'RIO NEGRO'
-];
-
-const NORTH_MS_BOUNDS = {
-  north: -17.50, south: -19.80, east: -52.50, west: -55.50,
-};
-
 const FACCOES_OPTIONS = [
   { value: '', label: 'Selecione:' },
   { value: 'PCC', label: 'PCC (Primeiro Comando da Capital)' },
   { value: 'CV', label: 'CV (Comando Vermelho)' },
   { value: 'TCP', label: 'TCP (Terceiro Comando Puro)' },
-  { value: 'GDE', label: 'GDE (Guardiões do Estado)' },
+  { value: 'GDE', label: 'GDE (Guardioes do Estado)' },
   { value: 'BDM', label: 'BDM (Bonde do Maluco)' },
   { value: 'SDC', label: 'SDC (Sindicato do Crime)' },
   { value: 'FDN', label: 'FDN (Família do Norte)' }
@@ -63,7 +48,6 @@ const AddIndividualModal: React.FC<AddIndividualModalProps> = ({ currentUser, on
   });
   const [photos, setPhotos] = useState<PhotoRecordUI[]>([]);
   const [attachments, setAttachments] = useState<AttachmentUI[]>([]);
-  const [relationships, setRelationships] = useState<RelationshipUI[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [cpfError, setCpfError] = useState(false);
   
@@ -72,58 +56,53 @@ const AddIndividualModal: React.FC<AddIndividualModalProps> = ({ currentUser, on
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteInstance = useRef<any>(null);
 
-  // Inicialização do Google Autocomplete
+  const initAutocomplete = () => {
+    if (!addressInputRef.current || !(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) return;
+
+    try {
+      const google = (window as any).google;
+      const options = {
+        componentRestrictions: { country: "br" },
+        fields: ['formatted_address', 'address_components', 'geometry'],
+        types: ['address']
+      };
+
+      autocompleteInstance.current = new google.maps.places.Autocomplete(
+        addressInputRef.current, 
+        options
+      );
+
+      autocompleteInstance.current.addListener('place_changed', () => {
+        const place = autocompleteInstance.current.getPlace();
+        if (!place.formatted_address) return;
+        setFormData(prev => ({ ...prev, endereco: place.formatted_address }));
+      });
+    } catch (err) {
+      console.error("Erro ao inicializar Autocomplete:", err);
+    }
+  };
+
   useEffect(() => {
-    const initAutocomplete = () => {
-      if (!addressInputRef.current || !(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) return;
-
-      try {
-        const google = (window as any).google;
-        const options = {
-          componentRestrictions: { country: "br" },
-          fields: ['formatted_address', 'address_components', 'geometry'],
-          types: ['address'],
-          locationRestriction: NORTH_MS_BOUNDS,
-          strictBounds: true
-        };
-
-        autocompleteInstance.current = new google.maps.places.Autocomplete(
-          addressInputRef.current, 
-          options
-        );
-
-        autocompleteInstance.current.addListener('place_changed', () => {
-          const place = autocompleteInstance.current.getPlace();
-          if (!place.address_components) return;
-
-          const cityComponent = place.address_components.find((c: any) => 
-            c.types.includes('administrative_area_level_2') || c.types.includes('locality')
-          );
-          const city = cityComponent?.long_name?.toUpperCase() || '';
-          const isAllowed = MS_CITIES_ALLOWED.some(allowedCity => city.includes(allowedCity));
-
-          if (!isAllowed) {
-            alert(`ALERTA: Endereço em "${city}" bloqueado.\nO sistema permite apenas cadastros na jurisdição da Força Tática (Região Norte de MS).`);
-            setFormData(prev => ({ ...prev, endereco: '' }));
-            if (addressInputRef.current) addressInputRef.current.value = '';
-          } else {
-            setFormData(prev => ({ ...prev, endereco: place.formatted_address }));
-          }
-        });
-      } catch (err) {
-        console.error("Erro ao inicializar Autocomplete:", err);
+    const loadScriptAndInit = () => {
+      if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) {
+        const scriptId = 'google-maps-script-add';
+        if (!document.getElementById(scriptId)) {
+          const script = document.createElement('script');
+          script.id = scriptId;
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
+          script.async = true;
+          script.defer = true;
+          script.onload = initAutocomplete;
+          document.head.appendChild(script);
+        }
+      } else {
+        initAutocomplete();
       }
     };
 
-    if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
-      script.async = true;
-      script.onload = initAutocomplete;
-      document.head.appendChild(script);
-    } else {
-      initAutocomplete();
-    }
+    loadScriptAndInit();
+    const timer = setTimeout(initAutocomplete, 1000);
+    return () => clearTimeout(timer);
   }, []);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -225,9 +204,9 @@ const AddIndividualModal: React.FC<AddIndividualModalProps> = ({ currentUser, on
         <div className="bg-slate-900 p-6 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10">
           <div className="flex items-center space-x-3">
             <div className="bg-yellow-600 p-2 rounded-lg"><i className="fas fa-user-plus text-white"></i></div>
-            <h3 className="text-xl font-black text-white uppercase tracking-tighter">Novo Cadastro Tático</h3>
+            <h3 className="text-xl font-black text-white uppercase tracking-tighter">NOVO CADASTRO</h3>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-white p-2"><i className="fas fa-times text-2xl"></i></button>
+          <button onClick={onClose} className="text-slate-500 hover:text-white p-2 transition-colors"><i className="fas fa-times text-2xl"></i></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-8">
@@ -255,19 +234,16 @@ const AddIndividualModal: React.FC<AddIndividualModalProps> = ({ currentUser, on
               </select>
             </div>
             <div className="lg:col-span-2">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex justify-between">
-                Endereço Residencial (Google Autocomplete)
-                <span className="text-[8px] text-yellow-600 font-bold uppercase">Restrito: Jurisdição Norte</span>
-              </label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Endereço Residencial (Google Autocomplete)</label>
               <div className="relative group">
                 <input 
                   type="text" 
                   ref={addressInputRef}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-white focus:ring-2 focus:ring-yellow-600 outline-none font-bold" 
-                  placeholder="Busque o endereço no sistema..."
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-600 transition-all font-bold" 
+                  placeholder="Rua, Número, Bairro, Cidade"
                   defaultValue={formData.endereco}
                 />
-                <i className="fas fa-search-location absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-yellow-600 transition-all"></i>
+                <i className="fas fa-search-location absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-yellow-600 transition-all"></i>
               </div>
             </div>
             <div>
@@ -279,7 +255,7 @@ const AddIndividualModal: React.FC<AddIndividualModalProps> = ({ currentUser, on
           <div className="space-y-4 pt-4 border-t border-slate-700">
             <div className="flex items-center justify-between mb-2">
                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Documentos em Anexo</h4>
-               <button type="button" onClick={() => attachmentInputRef.current?.click()} className="text-yellow-600 hover:text-yellow-500 text-[10px] font-black uppercase flex items-center bg-yellow-600/10 px-3 py-2 rounded-lg border border-yellow-600/30">
+               <button type="button" onClick={() => attachmentInputRef.current?.click()} className="text-yellow-600 hover:text-yellow-500 text-[10px] font-black uppercase flex items-center bg-yellow-600/10 px-3 py-2 rounded-lg border border-yellow-600/30 transition-all">
                 <i className="fas fa-paperclip mr-2"></i> Adicionar Anexo
               </button>
               <input type="file" ref={attachmentInputRef} onChange={handleAttachmentChange} className="hidden" multiple />
@@ -291,7 +267,7 @@ const AddIndividualModal: React.FC<AddIndividualModalProps> = ({ currentUser, on
                     <i className="fas fa-file-alt text-slate-500 mr-3"></i>
                     <span className="text-xs text-slate-300 font-bold truncate uppercase">{att.nome_arquivo}</span>
                   </div>
-                  <button type="button" onClick={() => removeAttachment(att.id)} className="text-slate-500 hover:text-red-500 ml-2"><i className="fas fa-trash-alt"></i></button>
+                  <button type="button" onClick={() => removeAttachment(att.id)} className="text-slate-500 hover:text-red-500 ml-2 transition-colors"><i className="fas fa-trash-alt"></i></button>
                 </div>
               ))}
             </div>
@@ -300,7 +276,7 @@ const AddIndividualModal: React.FC<AddIndividualModalProps> = ({ currentUser, on
           <div className="space-y-4 pt-4 border-t border-slate-700">
             <div className="flex items-center justify-between">
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Fotos de Identificação</label>
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="text-yellow-600 hover:text-yellow-500 text-[10px] font-black uppercase flex items-center">
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="text-yellow-600 hover:text-yellow-500 text-[10px] font-black uppercase flex items-center transition-all">
                 <i className="fas fa-camera mr-2"></i> Registrar Foto
               </button>
               <input type="file" ref={fileInputRef} onChange={handlePhotoChange} className="hidden" multiple accept="image/*" />
@@ -316,8 +292,8 @@ const AddIndividualModal: React.FC<AddIndividualModalProps> = ({ currentUser, on
           </div>
 
           <div className="flex gap-4 pt-4 border-t border-slate-700">
-            <button type="button" onClick={onClose} className="flex-1 bg-slate-700 text-white font-black py-4 rounded-xl uppercase text-xs transition-all hover:bg-slate-600">Cancelar</button>
-            <button type="submit" disabled={isSaving} className="flex-1 bg-yellow-600 text-white font-black py-4 rounded-xl uppercase text-xs shadow-lg shadow-yellow-600/20 transition-all hover:bg-yellow-500">
+            <button type="button" onClick={onClose} className="flex-1 bg-slate-700 text-white font-black py-4 rounded-xl uppercase text-xs transition-all hover:bg-slate-600 active:scale-95">Cancelar</button>
+            <button type="submit" disabled={isSaving} className="flex-1 bg-yellow-600 text-white font-black py-4 rounded-xl uppercase text-xs shadow-lg shadow-yellow-600/20 transition-all hover:bg-yellow-500 active:scale-95">
               {isSaving ? <i className="fas fa-spinner fa-spin mr-2"></i> : 'Sincronizar Cadastro'}
             </button>
           </div>

@@ -67,7 +67,7 @@ const App: React.FC = () => {
       <main className="flex-1 container mx-auto p-4 md:p-6 pb-24">
         <Routes>
           <Route path="/" element={<Dashboard user={auth.user} />} />
-          <Route path="/nova-abordagem" element={<NewApproach />} />
+          <Route path="/nova-abordagem" element={<NewApproach user={auth.user} />} />
           <Route path="/abordagens" element={<ApproachesList />} />
           <Route path="/individuos" element={<IndividualsList user={auth.user} />} />
           <Route path="/galeria" element={<Gallery />} />
