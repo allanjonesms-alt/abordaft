@@ -13,6 +13,19 @@ export interface User {
   primeiro_acesso: boolean;
 }
 
+export interface Shift {
+  id: string;
+  comandante: string;
+  motorista: string;
+  patrulheiro_1?: string;
+  patrulheiro_2?: string;
+  placa_vtr: string;
+  horario_inicio: string;
+  horario_fim?: string;
+  status: 'ATIVO' | 'ENCERRADO';
+  encerrado_por_nome?: string;
+}
+
 export interface PhotoRecord {
   id: string;
   path: string;
@@ -36,7 +49,6 @@ export interface Individual {
   fotos_individuos?: PhotoRecord[];
 }
 
-// Added missing Relationship interface used in EditIndividualModal.tsx
 export interface Relationship {
   id: string;
   individuo_id: string;
@@ -48,7 +60,6 @@ export interface Relationship {
   relacionado_alcunha?: string;
 }
 
-// Added missing Attachment interface used in EditIndividualModal.tsx
 export interface Attachment {
   id: string;
   individuo_id: string;

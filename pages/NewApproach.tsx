@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import LocationPickerModal from '../components/LocationPickerModal';
 import { maskCPF, validateCPF } from '../lib/utils';
+import { Shift } from '../types';
 
 interface PhotoRecordUI {
   id: string;
@@ -22,22 +24,12 @@ const FACCOES_OPTIONS = [
 ];
 
 const MS_CITIES_ALLOWED = [
-  'COXIM', 
-  'SONORA', 
-  'RIO VERDE DE MATO GROSSO', 
-  'RIO VERDE DE MT', 
-  'PEDRO GOMES', 
-  'ALCINÓPOLIS', 
-  'FIGUEIRÃO', 
-  'COSTA RICA', 
-  'RIO NEGRO'
+  'COXIM', 'SONORA', 'RIO VERDE DE MATO GROSSO', 'RIO VERDE DE MT', 
+  'PEDRO GOMES', 'ALCINÓPOLIS', 'FIGUEIRÃO', 'COSTA RICA', 'RIO NEGRO'
 ];
 
 const NORTH_MS_BOUNDS = {
-  north: -17.50,
-  south: -19.80,
-  east: -52.50,
-  west: -55.50,
+  north: -17.50, south: -19.80, east: -52.50, west: -55.50,
 };
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyCitBS_zUZ0485b8KS6G0dOzTFsWv1XH4s';
@@ -47,6 +39,9 @@ const NewApproach: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const residentialAddressRef = useRef<HTMLInputElement>(null);
   const autocompleteInstance = useRef<any>(null);
+
+  const [activeShift, setActiveShift] = useState<Shift | null>(null);
+  const [checkingShift, setCheckingShift] = useState(true);
 
   const [approachData, setApproachData] = useState({
     data: '',
@@ -70,6 +65,27 @@ const NewApproach: React.FC = () => {
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [cpfError, setCpfError] = useState(false);
+
+  useEffect(() => {
+    const checkActiveShift = async () => {
+      const { data, error } = await supabase
+        .from('servicos_vtr')
+        .select('*')
+        .eq('status', 'ATIVO')
+        .limit(1)
+        .maybeSingle();
+      
+      if (!data || error) {
+        alert('BLOQUEIO TÁTICO: Você não possui um serviço ativo. Redirecionando...');
+        navigate('/');
+      } else {
+        setActiveShift(data);
+        setApproachData(prev => ({ ...prev, vtr: data.placa_vtr }));
+      }
+      setCheckingShift(false);
+    };
+    checkActiveShift();
+  }, [navigate]);
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -96,6 +112,8 @@ const NewApproach: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (checkingShift || !activeShift) return;
+
     const initAutocomplete = () => {
       if (!residentialAddressRef.current || !(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) return;
 
@@ -122,11 +140,10 @@ const NewApproach: React.FC = () => {
             c.types.includes('administrative_area_level_2') || c.types.includes('locality')
           );
           const city = cityComponent?.long_name?.toUpperCase() || '';
-
           const isAllowed = MS_CITIES_ALLOWED.some(allowedCity => city.includes(allowedCity));
 
           if (!isAllowed) {
-            alert(`ALERTA: Endereço em "${city}" bloqueado.\nO sistema permite apenas cadastros nas cidades de: Coxim, Sonora, Rio Verde, Pedro Gomes, Alcinópolis, Figueirão, Costa Rica ou Rio Negro.`);
+            alert(`ALERTA: Endereço em "${city}" bloqueado.`);
             setIndividualData(prev => ({ ...prev, endereco_residencial: '' }));
             if (residentialAddressRef.current) residentialAddressRef.current.value = '';
           } else {
@@ -134,7 +151,7 @@ const NewApproach: React.FC = () => {
           }
         });
       } catch (err) {
-        console.error("Erro ao inicializar Autocomplete tradicional:", err);
+        console.error("Erro ao inicializar Autocomplete:", err);
       }
     };
 
@@ -152,7 +169,7 @@ const NewApproach: React.FC = () => {
     };
 
     loadScript();
-  }, []);
+  }, [checkingShift, activeShift]);
 
   const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -194,6 +211,7 @@ const NewApproach: React.FC = () => {
     e.preventDefault();
     if (!individualData.nome) return alert('Nome do abordado é obrigatório.');
     if (!approachData.local) return alert('Localização da abordagem é obrigatória.');
+    if (!activeShift) return alert('Serviço expirado ou encerrado.');
 
     setIsSaving(true);
     try {
@@ -221,7 +239,9 @@ const NewApproach: React.FC = () => {
           local: approachData.local,
           vtr: approachData.vtr,
           objetos_apreendidos: approachData.objetos,
-          relatorio: `Abordagem tática registrada. Local: ${approachData.local}. Nome: ${individualData.nome}.`
+          individuo_id: newInd.id,
+          individuo_nome: individualData.nome,
+          relatorio: `Abordagem tática registrada. VTR: ${approachData.vtr}. Guarnição: Comandante ${activeShift.comandante}, Motorista ${activeShift.motorista}.`
         }]);
 
       if (appError) throw appError;
@@ -247,18 +267,29 @@ const NewApproach: React.FC = () => {
     }
   };
 
+  if (checkingShift) {
+    return (
+      <div className="flex flex-col items-center justify-center py-40">
+        <i className="fas fa-satellite-dish fa-spin text-blue-600 text-5xl mb-6"></i>
+        <p className="text-white font-black uppercase tracking-widest text-xs">Validando Credenciais de Turno...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto py-6 px-4">
-      <div className="flex items-center space-x-4 mb-8">
-        <div className="bg-blue-600 p-3 rounded-2xl shadow-xl shadow-blue-600/20">
-          <i className="fas fa-file-signature text-white text-2xl"></i>
+      <div className="flex items-center justify-between mb-8 gap-4">
+        <div className="flex items-center space-x-4">
+          <div className="bg-blue-600 p-3 rounded-2xl shadow-xl shadow-blue-600/20">
+            <i className="fas fa-file-signature text-white text-2xl"></i>
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Nova Abordagem</h2>
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2">VTR: {activeShift?.placa_vtr} • CMD: {activeShift?.comandante}</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Novo Registro de Abordagem</h2>
-          <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2 flex items-center">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></span>
-            Terminal Tático Ativo
-          </p>
+        <div className="hidden sm:block bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl">
+           <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Serviço Verificado</span>
         </div>
       </div>
 
@@ -267,18 +298,18 @@ const NewApproach: React.FC = () => {
         <div className="bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl space-y-6">
           <div className="flex items-center justify-between border-b border-slate-700 pb-4">
             <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center">
-              <i className="fas fa-map-marked-alt text-blue-500 mr-2"></i> Localização e VTR
+              <i className="fas fa-map-marked-alt text-blue-500 mr-2"></i> Localização e Ocorrência
             </h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Local da Abordagem (GPS/Mapa)</label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Local da Abordagem</label>
               <div className="relative group">
                 <input 
                   type="text" 
                   readOnly
-                  placeholder="Selecione a localização exata no mapa..."
+                  placeholder="Selecione no mapa..."
                   className="w-full bg-slate-900 border border-slate-700 text-white pl-4 pr-12 py-4 rounded-2xl outline-none font-bold text-sm cursor-default" 
                   value={approachData.local}
                 />
@@ -293,22 +324,21 @@ const NewApproach: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Prefixo da Viatura</label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Viatura Utilizada</label>
               <input 
                 type="text" 
-                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm" 
-                placeholder="Ex: FT-01" 
+                className="w-full bg-slate-900 border border-slate-700 text-slate-500 p-4 rounded-2xl outline-none font-bold text-sm" 
                 value={approachData.vtr} 
-                onChange={e => setApproachData({...approachData, vtr: e.target.value.toUpperCase()})}
+                readOnly
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Objetos / Apreensões</label>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Apreensões</label>
               <input 
                 type="text" 
                 className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm" 
-                placeholder="Armas, entorpecentes..." 
+                placeholder="Armas, drogas, objetos..." 
                 value={approachData.objetos} 
                 onChange={e => setApproachData({...approachData, objetos: e.target.value})}
               />
@@ -320,7 +350,7 @@ const NewApproach: React.FC = () => {
         <div className="bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl space-y-6">
           <div className="border-b border-slate-700 pb-4">
             <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center">
-              <i className="fas fa-user-shield text-yellow-500 mr-2"></i> Identificação do Indivíduo
+              <i className="fas fa-user-shield text-yellow-500 mr-2"></i> Identificação do Abordado
             </h3>
           </div>
 
@@ -330,7 +360,7 @@ const NewApproach: React.FC = () => {
               <input 
                 type="text" 
                 className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm" 
-                placeholder="Sem abreviações" 
+                placeholder="NOME SEM ABREVIAÇÕES" 
                 value={individualData.nome} 
                 onChange={e => setIndividualData({...individualData, nome: e.target.value.toUpperCase()})} 
                 required
@@ -338,105 +368,34 @@ const NewApproach: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Alcunha / Vulgo</label>
-              <input 
-                type="text" 
-                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm" 
-                placeholder="Vulgo" 
-                value={individualData.alcunha} 
-                onChange={e => setIndividualData({...individualData, alcunha: e.target.value})} 
-              />
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Alcunha</label>
+              <input type="text" className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm" value={individualData.alcunha} onChange={e => setIndividualData({...individualData, alcunha: e.target.value})} />
             </div>
 
             <div>
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">CPF</label>
-              <input 
-                type="text" 
-                className={`w-full bg-slate-900 border ${cpfError ? 'border-red-500' : 'border-slate-700'} text-white p-4 rounded-2xl outline-none font-bold text-sm`} 
-                value={individualData.documento} 
-                onChange={handleCpfChange} 
-                maxLength={14} 
-              />
+              <input type="text" className={`w-full bg-slate-900 border ${cpfError ? 'border-red-500' : 'border-slate-700'} text-white p-4 rounded-2xl outline-none font-bold text-sm`} value={individualData.documento} onChange={handleCpfChange} maxLength={14} />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex justify-between items-center">
-                <span>Endereço Residencial</span>
-                <span className="text-yellow-600/70 text-[8px] font-black bg-yellow-600/10 px-2 py-0.5 rounded border border-yellow-600/20">RESTRITO: JURISDIÇÃO NORTE MS</span>
-              </label>
-              <div className="relative group">
-                <input 
-                  type="text" 
-                  ref={residentialAddressRef}
-                  className="w-full bg-slate-900 border border-slate-700 text-white pl-12 pr-4 py-4 rounded-2xl outline-none font-bold text-sm focus:ring-2 focus:ring-yellow-600 transition-all placeholder:text-slate-600" 
-                  placeholder="Rua, Número - Bairro (Apenas cidades autorizadas)" 
-                  defaultValue={individualData.endereco_residencial}
-                />
-                <i className="fas fa-search-location absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-yellow-600 transition-colors"></i>
-              </div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Residência</label>
+              <input type="text" ref={residentialAddressRef} className="w-full bg-slate-900 border border-slate-700 text-white px-4 py-4 rounded-2xl outline-none font-bold text-sm" placeholder="Buscar endereço..." defaultValue={individualData.endereco_residencial} />
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Facção / Grupo</label>
-              <select 
-                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none appearance-none font-bold text-sm" 
-                value={individualData.faccao} 
-                onChange={e => setIndividualData({...individualData, faccao: e.target.value})}
-              >
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Facção</label>
+              <select className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none appearance-none font-bold text-sm" value={individualData.faccao} onChange={e => setIndividualData({...individualData, faccao: e.target.value})}>
                 {FACCOES_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
             </div>
           </div>
         </div>
 
-        {/* Bloco 3: Fotos */}
-        <div className="bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-700 pb-4">
-            <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center">
-              <i className="fas fa-camera text-purple-500 mr-2"></i> Registro de Imagens
-            </h3>
-            <button 
-              type="button" 
-              onClick={() => fileInputRef.current?.click()}
-              className="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg flex items-center"
-            >
-              <i className="fas fa-plus-circle mr-2"></i> Nova Foto
-            </button>
-            <input type="file" ref={fileInputRef} onChange={handlePhotoCapture} className="hidden" multiple accept="image/*" />
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
-            {photos.map(photo => (
-              <div key={photo.id} className={`relative aspect-square rounded-2xl border-2 overflow-hidden group transition-all ${photo.isPrincipal ? 'border-yellow-600' : 'border-slate-700'}`}>
-                <img src={photo.data} className="w-full h-full object-cover" alt="Abordado" />
-                <button 
-                  type="button" 
-                  onClick={() => removePhoto(photo.id)} 
-                  className="absolute top-1 right-1 bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <i className="fas fa-times text-xs"></i>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Bloco 4: Ações (Botões integrados no formulário) */}
         <div className="bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl flex flex-col sm:flex-row gap-4">
-          <button 
-            type="button" 
-            onClick={() => navigate(-1)} 
-            className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-black py-4 rounded-2xl uppercase text-xs border border-slate-600 transition-all"
-          >
-            Cancelar
-          </button>
-          <button 
-            type="submit" 
-            disabled={isSaving}
-            className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center uppercase text-sm"
-          >
-            {isSaving ? <i className="fas fa-spinner fa-spin mr-3"></i> : <i className="fas fa-check-circle mr-3"></i>} 
-            {isSaving ? 'Gravando...' : 'Salvar Abordagem'}
+          <button type="button" onClick={() => navigate(-1)} className="flex-1 bg-slate-700 text-white font-black py-4 rounded-2xl uppercase text-xs">Sair</button>
+          <button type="submit" disabled={isSaving} className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center uppercase text-sm">
+            {isSaving ? <i className="fas fa-spinner fa-spin mr-3"></i> : <i className="fas fa-save mr-3"></i>} 
+            {isSaving ? 'Sincronizando...' : 'Concluir Abordagem'}
           </button>
         </div>
       </form>
