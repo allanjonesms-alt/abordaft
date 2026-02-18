@@ -395,7 +395,6 @@ const EditIndividualModal: React.FC<EditIndividualModalProps> = ({ individual, o
                             {new Date(app.data).toLocaleDateString('pt-BR')} às {app.horario}
                             </span>
                         </div>
-                        <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest px-1.5 py-0.5 bg-slate-800 rounded">{app.vtr || 'VTR N/D'}</span>
                         </div>
                         <div className="flex items-start gap-2">
                         <i className="fas fa-map-marker-alt text-red-500 text-[9px] mt-0.5"></i>

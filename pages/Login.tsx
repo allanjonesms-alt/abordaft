@@ -139,7 +139,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <div className="mt-12 text-center">
             <p className="text-slate-700 text-[9px] font-black uppercase tracking-[0.4em]">
-              SGAFT V2.7 • CREATED BY ALLAN JONES
+              SGAFT V2.8 • CREATED BY ALLAN JONES
             </p>
           </div>
         </div>

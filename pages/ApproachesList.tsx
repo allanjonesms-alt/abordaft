@@ -36,7 +36,6 @@ const ApproachCard = memo(({ app, onClick }: { app: any; onClick: () => void }) 
       <div className="flex-1 p-5 flex flex-col justify-between">
         <div className="flex justify-between items-start gap-4">
           <div className="flex flex-col min-w-0">
-            <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest leading-none mb-1">{app.vtr || 'VTR N/D'}</span>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-black text-white uppercase tracking-tight truncate">
                 {app.individuo_nome || 'INDIVÍDUO N/I'}
@@ -94,10 +93,9 @@ const ApproachDetailModal: React.FC<ApproachDetailModalProps> = ({ approach, onC
         </div>
 
         <div className="flex-1 overflow-y-auto p-8 space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-900/50 p-4 rounded-2xl border border-slate-700">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-slate-900/50 p-4 rounded-2xl border border-slate-700">
             <div><label className="block text-[8px] font-black text-slate-500 uppercase">Data</label><p className="text-sm font-bold text-white">{new Date(approach.data).toLocaleDateString('pt-BR')}</p></div>
             <div><label className="block text-[8px] font-black text-slate-500 uppercase">Hora</label><p className="text-sm font-bold text-white">{approach.horario}</p></div>
-            <div><label className="block text-[8px] font-black text-slate-500 uppercase">Viatura</label><p className="text-sm font-bold text-blue-500">{approach.vtr || 'N/D'}</p></div>
             <div><label className="block text-[8px] font-black text-slate-500 uppercase">Status</label><p className="text-sm font-bold text-green-500">{approach.resultado || 'N/I'}</p></div>
           </div>
 
@@ -155,7 +153,7 @@ const ApproachesList: React.FC = () => {
       const { data, error } = await supabase
         .from('abordagens')
         .select(`
-          id, data, horario, local, vtr, individuo_nome, foto_path,
+          id, data, horario, local, individuo_nome, foto_path,
           individuos:individuo_id ( faccao, fotos_individuos (path, is_primary) )
         `)
         .order('data', { ascending: false })

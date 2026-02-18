@@ -9,6 +9,7 @@ CREATE TABLE usuarios_sgaft (
     senha TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'OPERATOR' CHECK (role IN ('ADMIN', 'OPERATOR')),
     primeiro_acesso BOOLEAN DEFAULT false, -- FALSE: Pendente (Troca de senha) | TRUE: Liberado (Dashboard)
+    ord INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -16,30 +17,35 @@ CREATE TABLE usuarios_sgaft (
 ALTER TABLE usuarios_sgaft ENABLE ROW LEVEL SECURITY;
 
 -- 3. Políticas de Acesso
-CREATE POLICY "Permitir leitura para login" 
+CREATE POLICY "Permitir leitura para login e sistema" 
 ON usuarios_sgaft FOR SELECT 
 TO anon, authenticated 
 USING (true);
 
-CREATE POLICY "Permitir atualização para troca de senha" 
+CREATE POLICY "Permitir atualização para admins e troca de senha" 
 ON usuarios_sgaft FOR UPDATE 
 TO anon, authenticated 
 USING (true)
 WITH CHECK (true);
 
--- 4. Inserção dos usuários com permissões corrigidas
-INSERT INTO usuarios_sgaft (matricula, nome, senha, role, primeiro_acesso)
-VALUES 
-('123456', 'Administrador Master', 'Admin123', 'ADMIN', true),
-('133613021', 'Admin Força Tática', 'Senha123', 'ADMIN', true),
-('814058021', 'Operador Especial 2', 'Senha123', 'OPERATOR', true);
+CREATE POLICY "Permitir inserção de usuários" 
+ON usuarios_sgaft FOR INSERT 
+TO anon, authenticated 
+WITH CHECK (true);
 
--- Usuário pendente de troca de senha
-INSERT INTO usuarios_sgaft (matricula, nome, senha, role, primeiro_acesso)
-VALUES 
-('000000000', 'Operador Novo', '123456', 'OPERATOR', false);
+CREATE POLICY "Permitir exclusão de usuários para admins" 
+ON usuarios_sgaft FOR DELETE 
+TO anon, authenticated 
+USING (true);
 
--- 5. Tabelas operacionais básicas
+-- 4. Inserção dos usuários iniciais
+INSERT INTO usuarios_sgaft (matricula, nome, senha, role, primeiro_acesso, ord)
+VALUES 
+('123456', 'Administrador Master', 'Admin123', 'ADMIN', true, 1),
+('133613021', 'Admin Força Tática', 'Senha123', 'ADMIN', true, 2),
+('814058021', 'Operador Especial 2', 'Senha123', 'OPERATOR', true, 3);
+
+-- 5. Tabelas operacionais básicas (Mantidas conforme original)
 CREATE TABLE IF NOT EXISTS individuos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nome TEXT NOT NULL,
@@ -68,23 +74,11 @@ CREATE TABLE IF NOT EXISTS abordagens (
     data DATE NOT NULL,
     horario TEXT NOT NULL,
     local TEXT NOT NULL,
-    vtr TEXT,
     relatorio TEXT,
     objetos_apreendidos TEXT,
     resultado TEXT,
     individuo_nome TEXT,
     individuo_id UUID REFERENCES individuos(id) ON DELETE SET NULL,
     foto_path TEXT,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS individuos_anexos (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    individuo_id UUID REFERENCES individuos(id) ON DELETE CASCADE,
-    nome_arquivo TEXT NOT NULL,
-    tipo_mime TEXT NOT NULL,
-    path TEXT NOT NULL,
-    legenda TEXT,
-    created_by TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );

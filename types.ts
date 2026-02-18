@@ -11,6 +11,7 @@ export interface User {
   senha: string;
   role: UserRole;
   primeiro_acesso: boolean;
+  ord?: number;
 }
 
 export interface Shift {
@@ -19,7 +20,6 @@ export interface Shift {
   motorista: string;
   patrulheiro_1?: string;
   patrulheiro_2?: string;
-  placa_vtr: string;
   horario_inicio: string;
   horario_fim?: string;
   status: 'ATIVO' | 'ENCERRADO';
@@ -76,7 +76,6 @@ export interface DBApproach {
   data: string;
   horario: string;
   local: string;
-  vtr: string;
   relatorio: string;
   objetos_apreendidos?: string;
   resultado?: string;

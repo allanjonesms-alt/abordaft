@@ -44,7 +44,6 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
     data: '',
     horario: '',
     local: '',
-    vtr: '',
     objetos: ''
   });
 
@@ -89,9 +88,6 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
       if (isAdmin) {
         if (data) {
           setActiveShift(data);
-          setApproachData(prev => ({ ...prev, vtr: data.placa_vtr }));
-        } else {
-          setApproachData(prev => ({ ...prev, vtr: 'ADMIN-REG' }));
         }
         setCheckingShift(false);
       } else {
@@ -103,7 +99,6 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
           setTimeout(() => navigate('/'), 3000);
         } else {
           setActiveShift(data);
-          setApproachData(prev => ({ ...prev, vtr: data.placa_vtr }));
           setCheckingShift(false);
         }
       }
@@ -182,39 +177,9 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
     };
 
     loadScriptAndInit();
-    // Pequeno delay para garantir que o ref está disponível após render
     const timer = setTimeout(initAutocomplete, 500);
     return () => clearTimeout(timer);
   }, [checkingShift]);
-
-  const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      Array.from(files).forEach((file: File) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result as string;
-          setPhotos(prev => [...prev, {
-            id: Math.random().toString(36).substr(2, 9),
-            data: base64,
-            isPrincipal: prev.length === 0
-          }]);
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const removePhoto = (id: string) => {
-    setPhotos(prev => {
-      const filtered = prev.filter(p => p.id !== id);
-      if (filtered.length > 0 && !filtered.some(p => p.isPrincipal)) {
-        filtered[0].isPrincipal = true;
-      }
-      return filtered;
-    });
-  };
 
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const masked = maskCPF(e.target.value);
@@ -252,25 +217,13 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
           data: approachData.data,
           horario: approachData.horario,
           local: approachData.local,
-          vtr: approachData.vtr,
           objetos_apreendidos: approachData.objetos,
           individuo_id: newInd.id,
           individuo_nome: individualData.nome,
-          relatorio: `Abordagem registrada via Terminal SGAFT. VTR: ${approachData.vtr}.`
+          relatorio: `Abordagem registrada via Terminal SGAFT.`
         }]);
 
       if (appError) throw appError;
-
-      if (photos.length > 0 && newInd) {
-        const photosPayload = photos.map((p, idx) => ({
-          individuo_id: newInd.id,
-          path: p.data,
-          is_primary: p.isPrincipal,
-          sort_order: idx,
-          created_at: new Date().toISOString()
-        }));
-        await supabase.from('fotos_individuos').insert(photosPayload);
-      }
 
       alert('Registro finalizado com sucesso!');
       navigate('/abordagens');
@@ -302,7 +255,7 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
           <div>
             <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Nova Abordagem</h2>
             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2">
-              VTR: {approachData.vtr} {activeShift ? `• CMD: ${activeShift.comandante}` : '• REGISTRO ADMIN'}
+              {activeShift ? `CMD: ${activeShift.comandante}` : 'REGISTRO ADMIN'}
             </p>
           </div>
         </div>
@@ -312,7 +265,6 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8 pb-12">
-        {/* Bloco 1: Localização */}
         <div className="bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl space-y-6">
           <div className="flex items-center justify-between border-b border-slate-700 pb-4">
             <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center">
@@ -341,19 +293,7 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
               </div>
             </div>
             
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Viatura Utilizada</label>
-              <input 
-                type="text" 
-                className={`w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 outline-none font-bold text-sm ${activeShift ? 'text-slate-500' : 'text-white'}`} 
-                value={approachData.vtr} 
-                readOnly={!!activeShift}
-                onChange={e => !activeShift && setApproachData({...approachData, vtr: e.target.value.toUpperCase()})}
-                placeholder="PLACA OU PREFIXO"
-              />
-            </div>
-
-            <div>
+            <div className="md:col-span-2">
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Apreensões</label>
               <input 
                 type="text" 
@@ -366,7 +306,6 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
           </div>
         </div>
 
-        {/* Bloco 2: Indivíduo */}
         <div className="bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl space-y-6">
           <div className="border-b border-slate-700 pb-4">
             <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center">

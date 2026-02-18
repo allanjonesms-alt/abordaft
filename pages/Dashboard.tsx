@@ -202,7 +202,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           <div>
             <h4 className="text-yellow-500 font-black uppercase text-xs tracking-widest">Acesso Limitado</h4>
             <p className="text-slate-400 text-[10px] mt-1 uppercase font-bold leading-relaxed">
-              Serviço em andamento na VTR <span className="text-white">{activeShift.placa_vtr}</span>. Como você não faz parte desta guarnição, seu acesso para novos registros está bloqueado por diretriz tática.
+              Serviço em andamento. Como você não faz parte desta guarnição, seu acesso para novos registros está bloqueado por diretriz tática.
             </p>
           </div>
         </div>
@@ -212,9 +212,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         <div className="flex items-center space-x-4">
           <TacticalLogo size="md" className="opacity-80" />
           <div>
-            <h4 className="text-slate-300 font-bold uppercase text-xs tracking-widest">Status da Conexão</h4>
-            <p className="text-slate-500 text-[10px] mt-1 uppercase font-black">
-              Terminal conectado à rede central da Força Tática. Monitoramento ativo.
+            <h4 className="text-slate-300 font-bold uppercase text-xs tracking-widest">SGAFT V2.8</h4>
+            <p className="text-slate-500 text-[10px] mt-1 uppercase font-black tracking-[0.2em]">
+              CREATED BY SGT JONES • MONITORAMENTO OPERACIONAL ATIVO
             </p>
           </div>
         </div>

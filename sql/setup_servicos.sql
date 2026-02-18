@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS servicos_vtr (
     motorista TEXT NOT NULL,
     patrulheiro_1 TEXT,
     patrulheiro_2 TEXT,
-    placa_vtr TEXT NOT NULL,
     horario_inicio TIMESTAMPTZ DEFAULT now(),
     horario_fim TIMESTAMPTZ,
     criado_por UUID REFERENCES usuarios_sgaft(id),

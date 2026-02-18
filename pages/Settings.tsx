@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { User, UserRole } from '../types';
 import { supabase } from '../lib/supabase';
+import AddUserModal from '../components/AddUserModal';
 
 interface SettingsProps {
   user: User | null;
@@ -11,10 +12,9 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
   const [usersList, setUsersList] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isImporting, setIsImporting] = useState(false);
-  const [importStatus, setImportStatus] = useState('');
   
-  // Estados para Edição
+  // Estados para Modais
+  const [isAddingUser, setIsAddingUser] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -24,7 +24,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
       const { data, error } = await supabase
         .from('usuarios_sgaft')
         .select('*')
-        .order('nome', { ascending: true });
+        .order('ord', { ascending: true }); // Ordenação por ord crescente conforme solicitado
       
       if (!error && data) {
         setUsersList(data as User[]);
@@ -84,7 +84,8 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
         .update({
           nome: editingUser.nome,
           matricula: editingUser.matricula,
-          role: editingUser.role
+          role: editingUser.role,
+          ord: editingUser.ord
         })
         .eq('id', editingUser.id);
 
@@ -96,15 +97,6 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleImportLegacyData = async () => {
-    if (!confirm('Deseja importar os dados do CSV legado?')) return;
-    setIsImporting(true);
-    setImportStatus('Processando CSV...');
-    // ... lógica de importação mantida ...
-    setImportStatus('Importação finalizada.');
-    setIsImporting(false);
   };
 
   const filteredUsers = usersList.filter(u => 
@@ -126,22 +118,28 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
           </div>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4">
            <div className="relative">
               <input 
                 type="text" 
                 placeholder="Filtrar por nome/ID..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="bg-slate-800 border border-slate-700 text-white pl-10 pr-4 py-3 rounded-xl text-xs font-bold focus:ring-2 focus:ring-yellow-600 outline-none w-64"
+                className="bg-slate-800 border border-slate-700 text-white pl-10 pr-4 py-3 rounded-xl text-xs font-bold focus:ring-2 focus:ring-yellow-600 outline-none w-full sm:w-64"
               />
               <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
            </div>
+           <button 
+             onClick={() => setIsAddingUser(true)}
+             className="bg-yellow-600 hover:bg-yellow-500 text-white px-6 py-3 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-yellow-600/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+           >
+             <i className="fas fa-user-plus"></i> Novo Operador
+           </button>
         </div>
       </div>
 
       {/* Lista de Usuários */}
-      <section className="px-4">
+      <section className="px-4 pb-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {isLoading ? (
             <div className="col-span-full py-20 text-center">
@@ -162,7 +160,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
                 </div>
                 <div className="overflow-hidden">
                   <h4 className="text-white font-black uppercase text-sm truncate">{u.nome}</h4>
-                  <p className="text-slate-500 text-[10px] font-bold">MAT: {u.matricula}</p>
+                  <p className="text-slate-500 text-[10px] font-bold">MAT: {u.matricula} • ORD: {u.ord || 0}</p>
                 </div>
               </div>
 
@@ -192,27 +190,13 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
         </div>
       </section>
 
-      {/* Seção de Importação Legada */}
-      <section className="px-4">
-        <div className="bg-slate-800/50 border border-slate-700 border-dashed p-8 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="max-w-md">
-            <h3 className="text-white font-black uppercase tracking-tight text-lg flex items-center">
-              <i className="fas fa-database text-yellow-600 mr-3"></i> Sincronização Legada
-            </h3>
-            <p className="text-slate-500 text-xs mt-2 font-medium">
-              Importar registros históricos de abordagens e indivíduos a partir do documento CSV mestre.
-            </p>
-          </div>
-          <button 
-            onClick={handleImportLegacyData}
-            disabled={isImporting}
-            className="bg-yellow-600 hover:bg-yellow-500 text-white px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-xl disabled:opacity-50"
-          >
-            {isImporting ? <i className="fas fa-spinner fa-spin mr-2"></i> : <i className="fas fa-file-import mr-2"></i>}
-            {isImporting ? 'Processando...' : 'Importar CSV'}
-          </button>
-        </div>
-      </section>
+      {/* Modal de Cadastro de Operador */}
+      {isAddingUser && (
+        <AddUserModal 
+          onClose={() => setIsAddingUser(false)} 
+          onSave={() => { fetchUsers(); setIsAddingUser(false); }} 
+        />
+      )}
 
       {/* Modal de Edição de Usuário */}
       {editingUser && (
@@ -234,14 +218,25 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
                 />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Matrícula (Login)</label>
-                <input 
-                  type="text" 
-                  value={editingUser.matricula} 
-                  onChange={e => setEditingUser({...editingUser, matricula: e.target.value})}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Matrícula</label>
+                  <input 
+                    type="text" 
+                    value={editingUser.matricula} 
+                    onChange={e => setEditingUser({...editingUser, matricula: e.target.value})}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Ordem</label>
+                  <input 
+                    type="number" 
+                    value={editingUser.ord || 0} 
+                    onChange={e => setEditingUser({...editingUser, ord: parseInt(e.target.value) || 0})}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none"
+                  />
+                </div>
               </div>
 
               <div>

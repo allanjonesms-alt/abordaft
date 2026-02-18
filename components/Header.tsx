@@ -39,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
 
   const handleEndShift = async () => {
     if (!activeShift) return;
-    if (!confirm('Deseja encerrar o serviço desta guarnição e viatura?\nO horário de término será registrado agora.')) return;
+    if (!confirm('Deseja encerrar o serviço desta guarnição?\nO horário de término será registrado agora.')) return;
 
     try {
       const { error } = await supabase
@@ -91,7 +91,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
               <div className="flex items-center bg-slate-900 rounded-xl border border-slate-700 px-3 py-1.5 gap-3">
                 <div className="flex flex-col items-end hidden sm:flex">
                   <span className="text-[8px] font-black text-green-500 uppercase tracking-widest animate-pulse">Serviço Ativo</span>
-                  <span className="text-[10px] font-bold text-white uppercase">{activeShift.placa_vtr}</span>
+                  <span className="text-[10px] font-bold text-white uppercase">CMD: {activeShift.comandante}</span>
                 </div>
                 <button 
                   onClick={handleEndShift}
