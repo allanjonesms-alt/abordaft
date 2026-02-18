@@ -240,7 +240,7 @@ const StartShiftModal: React.FC<StartShiftModalProps> = ({ user, onClose, onStar
                 <i className="fas fa-users-rays text-green-500 text-xs"></i>
               </div>
               <div>
-                <h3 className="text-sm font-black text-white uppercase tracking-tighter leading-none">Distribuição Tática</h3>
+                <h3 className="text-sm font-black text-white uppercase tracking-tighter leading-none">Distribuição de Postos</h3>
                 <p className="text-[8px] text-slate-500 font-bold uppercase mt-1 tracking-widest">Arraste para os assentos</p>
               </div>
             </div>

@@ -247,7 +247,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none appearance-none"
                 >
                   <option value={UserRole.ADMIN}>ADMINISTRADOR</option>
-                  <option value={UserRole.OPERATOR}>OPERADOR TÁTICO</option>
+                  <option value={UserRole.OPERATOR}>OPERADOR</option>
                 </select>
               </div>
 

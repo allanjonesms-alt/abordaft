@@ -87,7 +87,7 @@ const ApproachDetailModal: React.FC<ApproachDetailModalProps> = ({ approach, onC
         <div className="bg-slate-900 p-6 border-b border-slate-700 flex justify-between items-center">
           <div className="flex items-center space-x-3">
             <div className="bg-blue-600 p-2 rounded-lg"><i className="fas fa-file-contract text-white"></i></div>
-            <h3 className="text-sm font-black text-white uppercase tracking-tighter">Relatório Tático</h3>
+            <h3 className="text-sm font-black text-white uppercase tracking-tighter">Relatório Operacional</h3>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors"><i className="fas fa-times text-xl"></i></button>
         </div>
@@ -180,7 +180,7 @@ const ApproachesList: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto py-6 px-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Histórico Tático</h2>
+        <h2 className="text-2xl font-black text-white uppercase tracking-tighter">Histórico Operacional</h2>
         <input type="text" placeholder="Filtrar registros..." value={search} onChange={(e) => setSearch(e.target.value)} className="bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:ring-2 focus:ring-blue-600 transition-all font-bold text-sm w-full md:w-80" />
       </div>
 

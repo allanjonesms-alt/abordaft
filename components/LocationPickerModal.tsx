@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 
 interface LocationPickerModalProps {
@@ -26,7 +27,7 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({ onClose, onCo
       try {
         const google = (window as any).google;
         
-        // Inicialização via namespace tradicional (libraries=marker já carrega AdvancedMarker no namespace)
+        // Inicialização via namespace tradicional (libraries=marker já carrega AdvancedMarker nel namespace)
         googleMap.current = new google.maps.Map(mapRef.current, {
           center: defaultPos,
           zoom: 15,
@@ -147,7 +148,7 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({ onClose, onCo
               <i className="fas fa-map-marked-alt text-white"></i>
             </div>
             <div>
-              <h3 className="text-sm font-black text-white uppercase tracking-tighter">Posicionamento Tático</h3>
+              <h3 className="text-sm font-black text-white uppercase tracking-tighter">Posicionamento Geográfico</h3>
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Arraste o PIN para ajustar o local</p>
             </div>
           </div>

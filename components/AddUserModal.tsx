@@ -26,7 +26,6 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onSave }) => {
 
     try {
       // 1. Lógica de Reordenamento (ord + 1)
-      // Buscamos todos os usuários que têm ordem maior ou igual à desejada
       const { data: usersToShift, error: fetchError } = await supabase
         .from('usuarios_sgaft')
         .select('id, ord')
@@ -34,7 +33,6 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onSave }) => {
 
       if (fetchError) throw fetchError;
 
-      // Se houver usuários para "empurrar", atualizamos eles primeiro
       if (usersToShift && usersToShift.length > 0) {
         const updates = usersToShift.map(u => ({
           id: u.id,
@@ -96,10 +94,10 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onSave }) => {
             <input 
               type="text" 
               required
-              className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-5 py-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none transition-all"
+              className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-5 py-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none transition-all uppercase"
               placeholder="NOME DO POLICIAL"
               value={formData.nome}
-              onChange={e => setFormData({...formData, nome: e.target.value})}
+              onChange={e => setFormData(prev => ({...prev, nome: e.target.value.toUpperCase()}))}
             />
           </div>
 
@@ -112,7 +110,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onSave }) => {
                 className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-5 py-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none transition-all"
                 placeholder="ID"
                 value={formData.matricula}
-                onChange={e => setFormData({...formData, matricula: e.target.value})}
+                onChange={e => setFormData(prev => ({...prev, matricula: e.target.value}))}
               />
             </div>
             <div>
@@ -121,7 +119,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onSave }) => {
                 type="number" 
                 className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-5 py-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none transition-all"
                 value={formData.ord}
-                onChange={e => setFormData({...formData, ord: parseInt(e.target.value) || 0})}
+                onChange={e => setFormData(prev => ({...prev, ord: parseInt(e.target.value) || 0}))}
               />
             </div>
           </div>
@@ -134,7 +132,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onSave }) => {
               className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-5 py-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none transition-all"
               placeholder="••••••••"
               value={formData.senha}
-              onChange={e => setFormData({...formData, senha: e.target.value})}
+              onChange={e => setFormData(prev => ({...prev, senha: e.target.value}))}
             />
           </div>
 
@@ -143,9 +141,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({ onClose, onSave }) => {
             <select 
               className="w-full bg-slate-950 border border-slate-700 rounded-2xl px-5 py-4 text-white font-bold focus:ring-2 focus:ring-yellow-600 outline-none appearance-none"
               value={formData.role}
-              onChange={e => setFormData({...formData, role: e.target.value as UserRole})}
+              onChange={e => setFormData(prev => ({...prev, role: e.target.value as UserRole}))}
             >
-              <option value={UserRole.OPERATOR}>OPERADOR TÁTICO</option>
+              <option value={UserRole.OPERATOR}>OPERADOR</option>
               <option value={UserRole.ADMIN}>ADMINISTRADOR</option>
             </select>
           </div>

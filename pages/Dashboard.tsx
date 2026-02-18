@@ -202,7 +202,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           <div>
             <h4 className="text-yellow-500 font-black uppercase text-xs tracking-widest">Acesso Limitado</h4>
             <p className="text-slate-400 text-[10px] mt-1 uppercase font-bold leading-relaxed">
-              Serviço em andamento. Como você não faz parte desta guarnição, seu acesso para novos registros está bloqueado por diretriz tática.
+              Serviço em andamento. Como você não faz parte desta guarnição, seu acesso para novos registros está bloqueado por diretriz operacional.
             </p>
           </div>
         </div>

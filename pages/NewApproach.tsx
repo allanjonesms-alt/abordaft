@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import LocationPickerModal from '../components/LocationPickerModal';
 import TacticalAlert from '../components/TacticalAlert';
 import { maskCPF, validateCPF } from '../lib/utils';
-import { Shift, User, UserRole } from '../types';
+import { Shift, User, UserRole, Individual } from '../types';
 
 interface PhotoRecordUI {
   id: string;
@@ -35,6 +35,7 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const residentialAddressRef = useRef<HTMLInputElement>(null);
   const autocompleteInstance = useRef<any>(null);
+  const autocompleteRef = useRef<HTMLDivElement>(null);
 
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [checkingShift, setCheckingShift] = useState(true);
@@ -57,10 +58,26 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
     faccao: ''
   });
 
+  const [selectedIndId, setSelectedIndId] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Individual[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+
   const [photos, setPhotos] = useState<PhotoRecordUI[]>([]);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [cpfError, setCpfError] = useState(false);
+
+  // Fecha sugestões ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const checkActiveShift = async () => {
@@ -92,7 +109,7 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
         setCheckingShift(false);
       } else {
         if (!data || error) {
-          setAlertMessage('BLOQUEIO TÁTICO: Você não possui um serviço ativo. Redirecionando...');
+          setAlertMessage('BLOQUEIO DE ACESSO: Você não possui um serviço ativo. Redirecionando...');
           setTimeout(() => navigate('/'), 3000);
         } else if (!isUserInShift(user?.nome, data)) {
           setAlertMessage('VIOLAÇÃO DE ACESSO: Você não está escalado neste serviço. Acesso negado.');
@@ -183,9 +200,53 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
 
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const masked = maskCPF(e.target.value);
-    setIndividualData({ ...individualData, documento: masked });
+    setIndividualData(prev => ({ ...prev, documento: masked }));
     if (masked.length === 14) setCpfError(!validateCPF(masked));
     else setCpfError(false);
+  };
+
+  const handleNameChange = async (val: string) => {
+    const upperVal = val.toUpperCase();
+    
+    // Atualização funcional evita usar estado atrasado (stale)
+    setIndividualData(prev => ({ ...prev, nome: upperVal }));
+    setSelectedIndId(null); 
+
+    if (upperVal.length >= 3) {
+      setIsSearching(true);
+      const { data } = await supabase
+        .from('individuos')
+        .select('*')
+        .ilike('nome', `%${upperVal}%`)
+        .limit(5);
+      
+      if (data) {
+        setSuggestions(data as Individual[]);
+        setShowSuggestions(data.length > 0);
+      }
+      setIsSearching(false);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const selectIndividual = (ind: Individual) => {
+    setIndividualData({
+      nome: ind.nome.toUpperCase(),
+      alcunha: ind.alcunha || '',
+      documento: ind.documento || '',
+      data_nascimento: ind.data_nascimento || '',
+      mae: ind.mae || '',
+      endereco_residencial: ind.endereco || '',
+      faccao: ind.faccao || ''
+    });
+    setSelectedIndId(ind.id);
+    setShowSuggestions(false);
+    
+    if (residentialAddressRef.current) {
+        residentialAddressRef.current.value = ind.endereco || '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -195,21 +256,56 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
 
     setIsSaving(true);
     try {
-      const { data: newInd, error: indError } = await supabase
-        .from('individuos')
-        .insert([{
-          nome: individualData.nome,
-          alcunha: individualData.alcunha,
-          documento: individualData.documento,
-          data_nascimento: individualData.data_nascimento,
-          mae: individualData.mae,
-          endereco: individualData.endereco_residencial,
-          faccao: individualData.faccao,
-          created_at: new Date().toISOString()
-        }])
-        .select().single();
+      let indId = selectedIndId;
 
-      if (indError) throw indError;
+      if (indId) {
+        const { error: updateError } = await supabase
+          .from('individuos')
+          .update({
+            nome: individualData.nome.toUpperCase(),
+            alcunha: individualData.alcunha,
+            documento: individualData.documento,
+            data_nascimento: individualData.data_nascimento,
+            mae: individualData.mae.toUpperCase(),
+            endereco: individualData.endereco_residencial,
+            faccao: individualData.faccao,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', indId);
+        
+        if (updateError) throw updateError;
+      } else {
+        if (individualData.documento) {
+          const { data: existingCpf } = await supabase
+            .from('individuos')
+            .select('id, nome')
+            .eq('documento', individualData.documento)
+            .maybeSingle();
+
+          if (existingCpf) {
+            alert(`ALERTA CRÍTICO: Este CPF já está cadastrado para o indivíduo: ${existingCpf.nome}. Selecione o nome na lista ou remova o CPF duplicado.`);
+            setIsSaving(false);
+            return;
+          }
+        }
+
+        const { data: newInd, error: indError } = await supabase
+          .from('individuos')
+          .insert([{
+            nome: individualData.nome.toUpperCase(),
+            alcunha: individualData.alcunha,
+            documento: individualData.documento,
+            data_nascimento: individualData.data_nascimento,
+            mae: individualData.mae.toUpperCase(),
+            endereco: individualData.endereco_residencial,
+            faccao: individualData.faccao,
+            created_at: new Date().toISOString()
+          }])
+          .select().single();
+
+        if (indError) throw indError;
+        indId = newInd.id;
+      }
 
       const { error: appError } = await supabase
         .from('abordagens')
@@ -218,9 +314,9 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
           horario: approachData.horario,
           local: approachData.local,
           objetos_apreendidos: approachData.objetos,
-          individuo_id: newInd.id,
-          individuo_nome: individualData.nome,
-          relatorio: `Abordagem registrada via Terminal SGAFT.`
+          individuo_id: indId,
+          individuo_nome: individualData.nome.toUpperCase(),
+          relatorio: `Abordagem registrada via Terminal SGAFT. Dados ${selectedIndId ? 'atualizados' : 'cadastrados'} no momento da ação.`
         }]);
 
       if (appError) throw appError;
@@ -307,33 +403,97 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
         </div>
 
         <div className="bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl space-y-6">
-          <div className="border-b border-slate-700 pb-4">
+          <div className="border-b border-slate-700 pb-4 flex justify-between items-center">
             <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center">
               <i className="fas fa-user-shield text-yellow-500 mr-2"></i> Identificação do Abordado
             </h3>
+            {selectedIndId && (
+              <span className="text-[8px] font-black bg-yellow-600/20 text-yellow-500 px-2 py-1 rounded-lg border border-yellow-600/30 uppercase tracking-widest">
+                Perfil Sincronizado
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-2">
+            <div className="md:col-span-2 relative" ref={autocompleteRef}>
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nome Completo</label>
-              <input 
-                type="text" 
-                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm" 
-                placeholder="NOME SEM ABREVIAÇÕES" 
-                value={individualData.nome} 
-                onChange={e => setIndividualData({...individualData, nome: e.target.value.toUpperCase()})} 
-                required
-              />
+              <div className="relative">
+                <input 
+                  type="text" 
+                  className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm uppercase focus:ring-2 focus:ring-yellow-600 transition-all" 
+                  placeholder="NOME OU BUSCA DE REGISTRO..." 
+                  value={individualData.nome} 
+                  onChange={e => handleNameChange(e.target.value)}
+                  onFocus={() => individualData.nome.length >= 3 && setShowSuggestions(true)}
+                  required
+                />
+                {isSearching && <i className="fas fa-spinner fa-spin absolute right-4 top-1/2 -translate-y-1/2 text-yellow-600"></i>}
+              </div>
+
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-50 left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                  {suggestions.map((ind) => (
+                    <div 
+                      key={ind.id} 
+                      onClick={() => selectIndividual(ind)}
+                      className="p-4 hover:bg-slate-800 cursor-pointer border-b border-slate-800 last:border-0 flex items-center justify-between group transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white font-black text-xs uppercase truncate group-hover:text-yellow-500 transition-colors">{ind.nome}</p>
+                        <div className="flex gap-2 mt-1">
+                          <span className="text-[8px] text-slate-500 font-bold uppercase">Vulgo: {ind.alcunha || 'N/I'}</span>
+                          {ind.faccao && <span className="text-[8px] text-red-500 font-bold uppercase tracking-widest">• {ind.faccao}</span>}
+                        </div>
+                      </div>
+                      <i className="fas fa-chevron-right text-slate-700 group-hover:text-yellow-500 transition-all ml-4"></i>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             <div>
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Alcunha</label>
-              <input type="text" className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm" value={individualData.alcunha} onChange={e => setIndividualData({...individualData, alcunha: e.target.value})} />
+              <input 
+                type="text" 
+                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm" 
+                placeholder="VULGO"
+                value={individualData.alcunha} 
+                onChange={e => setIndividualData(prev => ({...prev, alcunha: e.target.value}))} 
+              />
             </div>
 
             <div>
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">CPF</label>
-              <input type="text" className={`w-full bg-slate-900 border ${cpfError ? 'border-red-500' : 'border-slate-700'} text-white p-4 rounded-2xl outline-none font-bold text-sm`} value={individualData.documento} onChange={handleCpfChange} maxLength={14} />
+              <input 
+                type="text" 
+                className={`w-full bg-slate-900 border ${cpfError ? 'border-red-500' : 'border-slate-700'} text-white p-4 rounded-2xl outline-none font-bold text-sm`} 
+                value={individualData.documento} 
+                onChange={handleCpfChange} 
+                maxLength={14} 
+                placeholder="000.000.000-00"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Data Nasc.</label>
+              <input 
+                type="date" 
+                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm" 
+                value={individualData.data_nascimento} 
+                onChange={e => setIndividualData(prev => ({...prev, data_nascimento: e.target.value}))} 
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Mãe</label>
+              <input 
+                type="text" 
+                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm uppercase" 
+                placeholder="NOME DA MÃE"
+                value={individualData.mae} 
+                onChange={e => setIndividualData(prev => ({...prev, mae: e.target.value.toUpperCase()}))} 
+              />
             </div>
 
             <div className="md:col-span-2">
@@ -352,7 +512,7 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
 
             <div>
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Facção</label>
-              <select className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none appearance-none font-bold text-sm" value={individualData.faccao} onChange={e => setIndividualData({...individualData, faccao: e.target.value})}>
+              <select className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none appearance-none font-bold text-sm" value={individualData.faccao} onChange={e => setIndividualData(prev => ({...prev, faccao: e.target.value}))}>
                 {FACCOES_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
             </div>
@@ -363,7 +523,7 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
           <button type="button" onClick={() => navigate(-1)} className="flex-1 bg-slate-700 text-white font-black py-4 rounded-2xl uppercase text-xs">Sair</button>
           <button type="submit" disabled={isSaving} className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center uppercase text-sm">
             {isSaving ? <i className="fas fa-spinner fa-spin mr-3"></i> : <i className="fas fa-save mr-3"></i>} 
-            {isSaving ? 'Sincronizando...' : 'Concluir Abordagem'}
+            {isSaving ? 'Sincronizando...' : (selectedIndId ? 'Atualizar e Registrar' : 'Cadastrar e Registrar')}
           </button>
         </div>
       </form>
