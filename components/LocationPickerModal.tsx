@@ -1,12 +1,11 @@
 
 import React, { useEffect, useRef, useState } from 'react';
+import { loadGoogleMaps } from '../lib/googleMaps';
 
 interface LocationPickerModalProps {
   onClose: () => void;
   onConfirm: (address: string) => void;
 }
-
-const GOOGLE_MAPS_API_KEY = 'AIzaSyCitBS_zUZ0485b8KS6G0dOzTFsWv1XH4s';
 
 const LocationPickerModal: React.FC<LocationPickerModalProps> = ({ onClose, onConfirm }) => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -103,20 +102,13 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({ onClose, onCo
       }
     };
 
-    const loadGoogleMaps = () => {
-      if ((window as any).google && (window as any).google.maps) {
+    const setup = async () => {
+      try {
+        await loadGoogleMaps();
         initMap();
-        return;
+      } catch (err: any) {
+        setError(err.message || 'Erro ao carregar Google Maps.');
       }
-
-      const script = document.createElement('script');
-      // Carregamento tradicional com bibliotecas
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,marker&loading=async`;
-      script.async = true;
-      script.defer = true;
-      script.onload = initMap;
-      script.onerror = () => setError('Erro ao carregar Google Maps. Verifique a conexão ou a validade da chave API.');
-      document.head.appendChild(script);
     };
 
     const updateAddress = (pos: any) => {
@@ -131,7 +123,7 @@ const LocationPickerModal: React.FC<LocationPickerModalProps> = ({ onClose, onCo
       });
     };
 
-    loadGoogleMaps();
+    setup();
   }, []);
 
   const handleConfirm = () => {

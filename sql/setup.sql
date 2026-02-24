@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS individuos (
     mae TEXT,
     endereco TEXT,
     faccao TEXT,
+    observacao TEXT,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );

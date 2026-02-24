@@ -12,6 +12,7 @@ import IndividualsList from './pages/IndividualsList';
 import Gallery from './pages/Gallery';
 import Settings from './pages/Settings';
 import FirstAccess from './pages/FirstAccess';
+import MapPage from './pages/Map';
 
 const App: React.FC = () => {
   const [auth, setAuth] = useState<AuthState>({
@@ -71,6 +72,7 @@ const App: React.FC = () => {
           <Route path="/abordagens" element={<ApproachesList />} />
           <Route path="/individuos" element={<IndividualsList user={auth.user} />} />
           <Route path="/galeria" element={<Gallery />} />
+          <Route path="/mapas" element={<MapPage />} />
           <Route path="/configuracoes" element={<Settings user={auth.user} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

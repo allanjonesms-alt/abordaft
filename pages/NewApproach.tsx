@@ -6,6 +6,7 @@ import LocationPickerModal from '../components/LocationPickerModal';
 import TacticalAlert from '../components/TacticalAlert';
 import { maskCPF, validateCPF } from '../lib/utils';
 import { Shift, User, UserRole, Individual } from '../types';
+import { loadGoogleMaps } from '../lib/googleMaps';
 
 interface PhotoRecordUI {
   id: string;
@@ -27,8 +28,6 @@ const FACCOES_OPTIONS = [
   { value: 'SDC', label: 'SDC (Sindicato do Crime)' },
   { value: 'FDN', label: 'FDN (Família do Norte)' }
 ];
-
-const GOOGLE_MAPS_API_KEY = 'AIzaSyCitBS_zUZ0485b8KS6G0dOzTFsWv1XH4s';
 
 const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
   const navigate = useNavigate();
@@ -55,7 +54,8 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
     data_nascimento: '',
     mae: '',
     endereco_residencial: '',
-    faccao: ''
+    faccao: '',
+    observacao: ''
   });
 
   const [selectedIndId, setSelectedIndId] = useState<string | null>(null);
@@ -67,6 +67,8 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [cpfError, setCpfError] = useState(false);
+  const [isManualDateTime, setIsManualDateTime] = useState(false);
+  const [isEditingDateTime, setIsEditingDateTime] = useState(false);
 
   // Fecha sugestões ao clicar fora
   useEffect(() => {
@@ -124,6 +126,8 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
   }, [navigate, user]);
 
   useEffect(() => {
+    if (isManualDateTime) return;
+
     const updateDateTime = () => {
       const now = new Date();
       const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
@@ -145,7 +149,7 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
     updateDateTime();
     const timer = setInterval(updateDateTime, 30000); 
     return () => clearInterval(timer);
-  }, []);
+  }, [isManualDateTime]);
 
   const initAutocomplete = () => {
     if (!residentialAddressRef.current || !(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) return;
@@ -176,24 +180,16 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
   useEffect(() => {
     if (checkingShift) return;
 
-    const loadScriptAndInit = () => {
-      if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) {
-        const scriptId = 'google-maps-script-new-approach';
-        if (!document.getElementById(scriptId)) {
-          const script = document.createElement('script');
-          script.id = scriptId;
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
-          script.async = true;
-          script.defer = true;
-          script.onload = initAutocomplete;
-          document.head.appendChild(script);
-        }
-      } else {
+    const setup = async () => {
+      try {
+        await loadGoogleMaps();
         initAutocomplete();
+      } catch (err) {
+        console.error("Erro ao carregar Google Maps no NewApproach:", err);
       }
     };
 
-    loadScriptAndInit();
+    setup();
     const timer = setTimeout(initAutocomplete, 500);
     return () => clearTimeout(timer);
   }, [checkingShift]);
@@ -239,7 +235,8 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
       data_nascimento: ind.data_nascimento || '',
       mae: ind.mae || '',
       endereco_residencial: ind.endereco || '',
-      faccao: ind.faccao || ''
+      faccao: ind.faccao || '',
+      observacao: ind.observacao || ''
     });
     setSelectedIndId(ind.id);
     setShowSuggestions(false);
@@ -355,8 +352,55 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
             </p>
           </div>
         </div>
-        <div className="hidden sm:block bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl">
-           <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Sessão Segura</span>
+        <div className="bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl flex items-center gap-3">
+          {isEditingDateTime ? (
+            <div className="flex items-center gap-2">
+              <input 
+                type="date" 
+                className="bg-slate-900 border border-slate-700 text-white px-2 py-1 rounded text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                value={approachData.data}
+                onChange={e => {
+                  setIsManualDateTime(true);
+                  setApproachData(prev => ({ ...prev, data: e.target.value }));
+                }}
+              />
+              <input 
+                type="time" 
+                className="bg-slate-900 border border-slate-700 text-white px-2 py-1 rounded text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                value={approachData.horario}
+                onChange={e => {
+                  setIsManualDateTime(true);
+                  setApproachData(prev => ({ ...prev, horario: e.target.value }));
+                }}
+              />
+              <button 
+                type="button"
+                onClick={() => setIsEditingDateTime(false)}
+                className="text-green-500 hover:text-green-400 ml-1"
+              >
+                <i className="fas fa-check"></i>
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="text-right">
+                <div className="text-xs font-black text-white tracking-wider">
+                  {approachData.data ? approachData.data.split('-').reverse().join('/') : ''}
+                </div>
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  {approachData.horario} (UTC-4)
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setIsEditingDateTime(true)}
+                className="text-slate-400 hover:text-blue-400 transition-colors bg-slate-700/50 p-2 rounded-lg"
+                title="Alterar Data/Hora"
+              >
+                <i className="fas fa-clock"></i>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -515,6 +559,16 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
               <select className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none appearance-none font-bold text-sm" value={individualData.faccao} onChange={e => setIndividualData(prev => ({...prev, faccao: e.target.value}))}>
                 {FACCOES_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
+            </div>
+
+            <div className="md:col-span-3">
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Observações / Histórico Relevante</label>
+              <textarea 
+                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm min-h-[100px] resize-none" 
+                placeholder="Informações adicionais sobre o abordado..."
+                value={individualData.observacao} 
+                onChange={e => setIndividualData(prev => ({...prev, observacao: e.target.value}))}
+              />
             </div>
           </div>
         </div>

@@ -166,6 +166,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           colorClass="bg-purple-600"
           description="Visualizar registros fotográficos do sistema."
         />
+        <MenuButton
+          to="/mapas"
+          icon="fa-map-location-dot"
+          label="Mapas"
+          colorClass="bg-green-700"
+          description="Visualização geográfica de ocorrências e endereços."
+        />
 
         {user?.role === UserRole.ADMIN && (
           <div className="sm:col-span-2">
@@ -212,7 +219,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
         <div className="flex items-center space-x-4">
           <TacticalLogo size="md" className="opacity-80" />
           <div>
-            <h4 className="text-slate-300 font-bold uppercase text-xs tracking-widest">SGAFT V2.8</h4>
+            <h4 className="text-slate-300 font-bold uppercase text-xs tracking-widest">SGAFT V2.9</h4>
             <p className="text-slate-500 text-[10px] mt-1 uppercase font-black tracking-[0.2em]">
               CREATED BY SGT JONES • MONITORAMENTO OPERACIONAL ATIVO
             </p>

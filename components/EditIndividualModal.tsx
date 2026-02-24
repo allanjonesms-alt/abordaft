@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Individual, User, PhotoRecord, Relationship, Attachment, DBApproach } from '../types';
 import { maskCPF, validateCPF } from '../lib/utils';
+import { loadGoogleMaps } from '../lib/googleMaps';
 
 interface AttachmentViewerModalProps {
   attachment: Attachment;
@@ -59,8 +60,6 @@ export interface EditIndividualModalProps {
   onSave: (updated: Individual) => void;
   currentUser: User | null;
 }
-
-const GOOGLE_MAPS_API_KEY = 'AIzaSyCitBS_zUZ0485b8KS6G0dOzTFsWv1XH4s';
 
 const FACCOES_OPTIONS = [
   { value: '', label: 'Selecione:' },
@@ -121,24 +120,16 @@ const EditIndividualModal: React.FC<EditIndividualModalProps> = ({ individual, o
     fetchAttachments();
     fetchApproachesHistory();
 
-    const loadScriptAndInit = () => {
-      if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) {
-        const scriptId = 'google-maps-script-edit-individual';
-        if (!document.getElementById(scriptId)) {
-          const script = document.createElement('script');
-          script.id = scriptId;
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
-          script.async = true;
-          script.defer = true;
-          script.onload = initAutocomplete;
-          document.head.appendChild(script);
-        }
-      } else {
+    const setup = async () => {
+      try {
+        await loadGoogleMaps();
         initAutocomplete();
+      } catch (err) {
+        console.error("Erro ao carregar Google Maps no EditIndividualModal:", err);
       }
     };
 
-    loadScriptAndInit();
+    setup();
     const timer = setTimeout(initAutocomplete, 1000);
     return () => clearTimeout(timer);
   }, [individual.id]);
@@ -237,7 +228,7 @@ const EditIndividualModal: React.FC<EditIndividualModalProps> = ({ individual, o
         alcunha: formData.alcunha, 
         faccao: formData.faccao, 
         documento: formData.documento,
-        mae: formData.mae.toUpperCase(),
+        mae: formData.mae?.toUpperCase() || '',
         endereco: formData.endereco,
         data_nascimento: formData.data_nascimento, 
         updated_at: new Date().toISOString()
@@ -348,6 +339,16 @@ const EditIndividualModal: React.FC<EditIndividualModalProps> = ({ individual, o
                         />
                         <i className="fas fa-search-location absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-yellow-600"></i>
                       </div>
+                  </div>
+
+                  <div className="col-span-2">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Observações / Histórico Relevante</label>
+                      <textarea 
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-600 transition-all font-bold min-h-[100px] resize-none" 
+                        value={formData.observacao || ''} 
+                        onChange={e => setFormData({...formData, observacao: e.target.value})}
+                        placeholder="Informações adicionais sobre o abordado..."
+                      />
                   </div>
                 </div>
 

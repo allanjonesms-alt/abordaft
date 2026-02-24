@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { maskCPF, validateCPF } from '../lib/utils';
 import { User as AppUser, Individual } from '../types';
 import EditIndividualModal from './EditIndividualModal';
+import { loadGoogleMaps } from '../lib/googleMaps';
 
 interface PhotoRecordUI {
   id: string;
@@ -24,8 +25,6 @@ interface AddIndividualModalProps {
   onSave: () => void;
 }
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyCitBS_zUZ0485b8KS6G0dOzTFsWv1XH4s';
-
 const FACCOES_OPTIONS = [
   { value: '', label: 'Selecione:' },
   { value: 'PCC', label: 'PCC (Primeiro Comando da Capital)' },
@@ -45,7 +44,8 @@ const AddIndividualModal: React.FC<AddIndividualModalProps> = ({ currentUser, on
     documento: '',
     mae: '',
     endereco: '',
-    faccao: ''
+    faccao: '',
+    observacao: ''
   });
   const [photos, setPhotos] = useState<PhotoRecordUI[]>([]);
   const [attachments, setAttachments] = useState<AttachmentUI[]>([]);
@@ -93,24 +93,16 @@ const AddIndividualModal: React.FC<AddIndividualModalProps> = ({ currentUser, on
   };
 
   useEffect(() => {
-    const loadScriptAndInit = () => {
-      if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) {
-        const scriptId = 'google-maps-script-add';
-        if (!document.getElementById(scriptId)) {
-          const script = document.createElement('script');
-          script.id = scriptId;
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
-          script.async = true;
-          script.defer = true;
-          script.onload = initAutocomplete;
-          document.head.appendChild(script);
-        }
-      } else {
+    const setup = async () => {
+      try {
+        await loadGoogleMaps();
         initAutocomplete();
+      } catch (err) {
+        console.error("Erro ao carregar Google Maps no AddIndividualModal:", err);
       }
     };
 
-    loadScriptAndInit();
+    setup();
     const timer = setTimeout(initAutocomplete, 1000);
     return () => clearTimeout(timer);
   }, []);
@@ -168,12 +160,13 @@ const AddIndividualModal: React.FC<AddIndividualModalProps> = ({ currentUser, on
   const performSave = async () => {
     setIsSaving(true);
     try {
+      const { observacao, ...dataToSave } = formData;
       const { data: indData, error: indError } = await supabase
         .from('individuos')
         .insert([{ 
-          ...formData, 
+          ...dataToSave, 
           nome: formData.nome.toUpperCase(),
-          mae: formData.mae.toUpperCase(),
+          mae: formData.mae?.toUpperCase() || '',
           created_at: new Date().toISOString(), 
           updated_at: new Date().toISOString() 
         }])
@@ -349,6 +342,15 @@ const AddIndividualModal: React.FC<AddIndividualModalProps> = ({ currentUser, on
               <div>
                 <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Filiação Materna</label>
                 <input type="text" className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-yellow-600 outline-none font-bold uppercase" value={formData.mae} onChange={e => setFormData({...formData, mae: e.target.value.toUpperCase()})} placeholder="NOME DA MÃE" />
+              </div>
+              <div className="md:col-span-3">
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Observações / Histórico Relevante</label>
+                <textarea 
+                  className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-xl outline-none font-bold text-sm min-h-[100px] resize-none" 
+                  placeholder="Informações adicionais sobre o abordado..."
+                  value={formData.observacao} 
+                  onChange={e => setFormData({...formData, observacao: e.target.value})}
+                />
               </div>
             </div>
 
