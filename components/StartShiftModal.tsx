@@ -16,7 +16,12 @@ interface SeatAssignment {
   patrulheiro_2: string;
 }
 
-const ViaturaDiagram = ({ assignments, onDrop }: { assignments: SeatAssignment, onDrop: (role: keyof SeatAssignment, name: string) => void }) => {
+const ViaturaDiagram = ({ assignments, onDrop, activeRole, onRoleSelect }: { 
+  assignments: SeatAssignment, 
+  onDrop: (role: keyof SeatAssignment, name: string) => void,
+  activeRole?: keyof SeatAssignment | null,
+  onRoleSelect?: (role: keyof SeatAssignment) => void
+}) => {
   const [dragOver, setDragOver] = useState<string | null>(null);
 
   const handleDragOver = (e: React.DragEvent, role: string) => {
@@ -40,26 +45,29 @@ const ViaturaDiagram = ({ assignments, onDrop }: { assignments: SeatAssignment, 
   const renderSeat = (role: keyof SeatAssignment, label: string, x: string, y: string) => {
     const isOccupied = !!assignments[role];
     const isOver = dragOver === role;
+    const isSelected = activeRole === role;
 
     return (
       <div 
-        className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center p-1.5 rounded-xl transition-all duration-300 border-2 border-dashed
-          ${isOver ? 'bg-green-600/30 border-green-500 scale-105' : isOccupied ? 'bg-slate-900/90 border-slate-600 shadow-lg' : 'bg-slate-800/20 border-slate-700/50'}
+        onClick={() => onRoleSelect?.(role)}
+        className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center p-1.5 rounded-xl transition-all duration-300 border-2 
+          ${isSelected ? 'ring-2 ring-yellow-500 border-yellow-500 bg-yellow-600/20 scale-105 z-20' : isOver ? 'bg-green-600/30 border-green-500 scale-105' : isOccupied ? 'bg-slate-900/90 border-slate-600 shadow-lg border-solid' : 'bg-slate-800/20 border-slate-700/50 border-dashed'}
+          cursor-pointer
         `}
         style={{ left: x, top: y, width: '100px', height: '64px' }}
         onDragOver={(e) => handleDragOver(e, role)}
         onDragLeave={handleDragLeave}
         onDrop={(e) => handleDrop(e, role)}
       >
-        <div className={`flex items-center gap-1.5 mb-0.5 ${isOccupied ? 'text-green-500' : 'text-slate-600'}`}>
-          <i className={`fas ${isOccupied ? 'fa-user-ninja' : 'fa-user-plus'} text-xs`}></i>
+        <div className={`flex items-center gap-1.5 mb-0.5 ${isOccupied ? 'text-green-500' : isSelected ? 'text-yellow-500' : 'text-slate-600'}`}>
+          <i className={`fas ${isOccupied ? 'fa-user-ninja' : isSelected ? 'fa-crosshairs' : 'fa-user-plus'} text-xs`}></i>
           <span className="text-[7px] font-black uppercase tracking-tighter">{label}</span>
         </div>
         <div className="text-center w-full px-1">
           {isOccupied ? (
             <span className="text-[9px] font-black text-white uppercase leading-none block truncate">{assignments[role]}</span>
           ) : (
-            <span className="text-[7px] font-bold text-slate-700 uppercase italic leading-none">Vazio</span>
+            <span className="text-[7px] font-bold text-slate-700 uppercase italic leading-none">{isSelected ? 'Selecionar' : 'Vazio'}</span>
           )}
         </div>
       </div>
@@ -67,9 +75,9 @@ const ViaturaDiagram = ({ assignments, onDrop }: { assignments: SeatAssignment, 
   };
 
   return (
-    <div className="relative w-full aspect-[2/3] max-w-[240px] mx-auto scale-110">
+    <div className="relative w-full sm:aspect-[2/3] max-w-[240px] mx-auto sm:scale-110 h-[220px] sm:h-auto bg-slate-900/20 rounded-3xl border border-slate-700/30 sm:border-none">
       {/* VTR VECTOR - TOP VIEW */}
-      <svg viewBox="0 0 400 600" className="w-full h-full text-slate-400 drop-shadow-[0_0_20px_rgba(0,0,0,0.5)]" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 400 600" className="hidden sm:block w-full h-full text-slate-400 drop-shadow-[0_0_20px_rgba(0,0,0,0.5)]" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="carBody" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" style={{ stopColor: '#1e293b', stopOpacity: 1 }} />
@@ -117,6 +125,7 @@ const StartShiftModal: React.FC<StartShiftModalProps> = ({ user, onClose, onStar
   const [allOperators, setAllOperators] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [activeRole, setActiveRole] = useState<keyof SeatAssignment | null>('motorista');
   const [assignments, setAssignments] = useState<SeatAssignment>({
     comandante: '',
     motorista: '',
@@ -142,6 +151,13 @@ const StartShiftModal: React.FC<StartShiftModalProps> = ({ user, onClose, onStar
     });
     newAssignments[role] = name;
     setAssignments(newAssignments);
+    
+    // Auto-advance to next empty seat on mobile
+    if (window.innerWidth < 640) {
+      const roles: Array<keyof SeatAssignment> = ['motorista', 'comandante', 'patrulheiro_1', 'patrulheiro_2'];
+      const nextEmpty = roles.find(r => !newAssignments[r]);
+      if (nextEmpty) setActiveRole(nextEmpty);
+    }
   };
 
   const handleDragStart = (e: React.DragEvent, name: string) => {
@@ -207,28 +223,64 @@ const StartShiftModal: React.FC<StartShiftModalProps> = ({ user, onClose, onStar
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-2 grid grid-cols-3 gap-1.5 content-start custom-scrollbar">
-            {filteredOperators.map(op => {
-              const isAssigned = Object.values(assignments).includes(op.nome.toUpperCase());
-              return (
-                <div 
-                  key={op.id}
-                  draggable={!isAssigned}
-                  onDragStart={(e) => handleDragStart(e, op.nome.toUpperCase())}
-                  className={`p-0 rounded-xl border transition-all flex items-center gap-1.5 cursor-grab active:cursor-grabbing group min-w-0 h-9
-                    ${isAssigned ? 'bg-slate-950/40 border-slate-800 opacity-30 cursor-not-allowed' : 'bg-green-600/30 border-green-500/20 hover:border-green-400 hover:bg-green-600/40 shadow-sm'}
-                  `}
-                >
-                  <div className={`w-6 h-full flex items-center justify-center flex-shrink-0 rounded-l-xl ${isAssigned ? 'bg-slate-900 text-slate-700' : 'bg-green-600/20 text-green-400'}`}>
-                    <i className="fas fa-id-badge text-[9px]"></i>
+          <div className="flex-1 overflow-y-auto p-2 flex flex-col sm:grid sm:grid-cols-3 gap-1.5 content-start custom-scrollbar">
+            {/* Desktop View: Grid of Cards */}
+            <div className="hidden sm:grid grid-cols-3 gap-1.5 w-full">
+              {filteredOperators.map(op => {
+                const isAssigned = Object.values(assignments).includes(op.nome.toUpperCase());
+                return (
+                  <div 
+                    key={op.id}
+                    draggable={!isAssigned}
+                    onDragStart={(e) => handleDragStart(e, op.nome.toUpperCase())}
+                    className={`p-0 rounded-xl border transition-all flex items-center gap-1.5 cursor-grab active:cursor-grabbing group min-w-0 h-9
+                      ${isAssigned ? 'bg-slate-950/40 border-slate-800 opacity-30 cursor-not-allowed' : 'bg-green-600/30 border-green-500/20 hover:border-green-400 hover:bg-green-600/40 shadow-sm'}
+                    `}
+                  >
+                    <div className={`w-6 h-full flex items-center justify-center flex-shrink-0 rounded-l-xl ${isAssigned ? 'bg-slate-900 text-slate-700' : 'bg-green-600/20 text-green-400'}`}>
+                      <i className="fas fa-id-badge text-[9px]"></i>
+                    </div>
+                    <div className="flex-1 min-w-0 pr-1">
+                      <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{op.nome}</p>
+                      <p className="text-[6.5px] font-bold text-slate-400/80 uppercase tracking-tighter leading-none">ID: {op.matricula}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0 pr-1">
-                    <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{op.nome}</p>
-                    <p className="text-[6.5px] font-bold text-slate-400/80 uppercase tracking-tighter leading-none">ID: {op.matricula}</p>
-                  </div>
+                );
+              })}
+            </div>
+
+            {/* Mobile View: Simple List (Only when searching) */}
+            <div className="sm:hidden flex flex-col gap-1 w-full">
+              {searchTerm && filteredOperators.map(op => {
+                const isAssigned = Object.values(assignments).includes(op.nome.toUpperCase());
+                return (
+                  <button 
+                    key={op.id}
+                    disabled={isAssigned}
+                    onClick={() => activeRole && handleDropAssignment(activeRole, op.nome.toUpperCase())}
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all
+                      ${isAssigned ? 'bg-slate-950/40 border-slate-800 text-slate-600' : 'bg-slate-800 border-slate-700 text-white active:bg-green-600/20 active:border-green-500'}
+                    `}
+                  >
+                    <div className="flex flex-col items-start">
+                      <span className="text-[10px] font-black uppercase">{op.nome}</span>
+                      <span className="text-[8px] text-slate-500 font-bold uppercase">ID: {op.matricula}</span>
+                    </div>
+                    {isAssigned ? (
+                      <i className="fas fa-check text-green-500 text-xs"></i>
+                    ) : (
+                      <i className="fas fa-plus text-slate-600 text-xs"></i>
+                    )}
+                  </button>
+                );
+              })}
+              {!searchTerm && (
+                <div className="flex flex-col items-center justify-center py-8 opacity-30">
+                  <i className="fas fa-search text-2xl mb-2"></i>
+                  <p className="text-[8px] font-black uppercase tracking-widest">Pesquise para selecionar</p>
                 </div>
-              );
-            })}
+              )}
+            </div>
           </div>
         </div>
 
@@ -241,7 +293,8 @@ const StartShiftModal: React.FC<StartShiftModalProps> = ({ user, onClose, onStar
               </div>
               <div>
                 <h3 className="text-sm font-black text-white uppercase tracking-tighter leading-none">Distribuição de Postos</h3>
-                <p className="text-[8px] text-slate-500 font-bold uppercase mt-1 tracking-widest">Arraste para os assentos</p>
+                <p className="text-[8px] text-slate-500 font-bold uppercase mt-1 tracking-widest sm:block hidden">Arraste para os assentos</p>
+                <p className="text-[8px] text-yellow-500 font-bold uppercase mt-1 tracking-widest sm:hidden">Clique no posto e pesquise</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -255,7 +308,12 @@ const StartShiftModal: React.FC<StartShiftModalProps> = ({ user, onClose, onStar
           </div>
 
           <div className="flex-1 p-4 overflow-hidden flex items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] bg-opacity-5">
-            <ViaturaDiagram assignments={assignments} onDrop={handleDropAssignment} />
+            <ViaturaDiagram 
+              assignments={assignments} 
+              onDrop={handleDropAssignment} 
+              activeRole={activeRole}
+              onRoleSelect={setActiveRole}
+            />
           </div>
 
           <div className="p-4 border-t border-slate-700/50 bg-slate-900/60 backdrop-blur-md flex items-center justify-between shrink-0">

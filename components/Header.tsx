@@ -18,17 +18,28 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [isStartShiftModalOpen, setIsStartShiftModalOpen] = useState(false);
+  const [showEndShiftConfirm, setShowEndShiftConfirm] = useState(false);
+
+  const [isEndingShift, setIsEndingShift] = useState(false);
 
   const fetchActiveShift = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('servicos_vtr')
-      .select('*')
-      .eq('status', 'ATIVO')
-      .order('horario_inicio', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    
-    if (!error) setActiveShift(data);
+    try {
+      const { data, error } = await supabase
+        .from('servicos_vtr')
+        .select('*')
+        .eq('status', 'ATIVO')
+        .order('horario_inicio', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Erro ao buscar serviço ativo:', error);
+      } else {
+        setActiveShift(data);
+      }
+    } catch (err) {
+      console.error('Erro inesperado ao buscar serviço:', err);
+    }
   }, []);
 
   useEffect(() => {
@@ -38,24 +49,38 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
   }, [fetchActiveShift]);
 
   const handleEndShift = async () => {
-    if (!activeShift) return;
-    if (!confirm('Deseja encerrar o serviço desta guarnição?\nO horário de término será registrado agora.')) return;
-
+    if (!activeShift || isEndingShift) return;
+    
+    setIsEndingShift(true);
     try {
-      const { error } = await supabase
+      console.log('Iniciando encerramento global de serviços ativos...');
+      
+      const { error, data } = await supabase
         .from('servicos_vtr')
         .update({
           status: 'ENCERRADO',
           horario_fim: new Date().toISOString(),
-          encerrado_por_nome: user?.nome || 'Não Identificado'
+          encerrado_por_nome: user?.nome || 'Sistema (Manual)'
         })
-        .eq('id', activeShift.id);
+        .eq('status', 'ATIVO')
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro crítico no Supabase ao encerrar:', error);
+        throw error;
+      }
+
+      console.log('Serviços encerrados:', data);
       setActiveShift(null);
-      alert('Serviço encerrado com sucesso.');
+      setShowEndShiftConfirm(false);
+      
+      // Recarrega para garantir sincronismo total
+      window.location.reload();
     } catch (err: any) {
-      alert('Erro ao encerrar serviço: ' + err.message);
+      console.error('Falha operacional ao encerrar serviço:', err);
+      alert('ERRO OPERACIONAL: Não foi possível encerrar o serviço.\nDetalhes: ' + (err.message || 'Sem resposta do servidor.'));
+    } finally {
+      setIsEndingShift(false);
     }
   };
 
@@ -94,11 +119,16 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
                   <span className="text-[10px] font-bold text-white uppercase">CMD: {activeShift.comandante}</span>
                 </div>
                 <button 
-                  onClick={handleEndShift}
-                  className="bg-red-600 hover:bg-red-500 text-white w-10 h-10 rounded-lg shadow-lg flex items-center justify-center transition-all active:scale-95"
+                  onClick={() => setShowEndShiftConfirm(true)}
+                  disabled={isEndingShift}
+                  className={`${isEndingShift ? 'bg-slate-700' : 'bg-red-600 hover:bg-red-500'} text-white w-10 h-10 rounded-lg shadow-lg flex items-center justify-center transition-all active:scale-95`}
                   title="Encerrar Serviço"
                 >
-                  <i className="fas fa-square"></i>
+                  {isEndingShift ? (
+                    <i className="fas fa-spinner fa-spin"></i>
+                  ) : (
+                    <i className="fas fa-square"></i>
+                  )}
                 </button>
               </div>
             ) : (
@@ -152,6 +182,39 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
           user={user} 
           onClose={() => setIsPasswordModalOpen(false)} 
         />
+      )}
+
+      {showEndShiftConfirm && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+          <div className="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 bg-red-600/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/30">
+                <i className="fas fa-exclamation-triangle text-red-500 text-3xl"></i>
+              </div>
+              <h3 className="text-white font-black uppercase tracking-tighter text-xl mb-4">Encerrar Serviço?</h3>
+              <p className="text-slate-400 text-xs font-bold uppercase leading-relaxed mb-8">
+                Esta ação registrará o horário de término para toda a guarnição e liberará o terminal para novos serviços.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={handleEndShift}
+                  disabled={isEndingShift}
+                  className="w-full bg-red-600 hover:bg-red-500 text-white font-black py-4 rounded-2xl uppercase text-xs shadow-xl shadow-red-600/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {isEndingShift ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-check"></i>}
+                  {isEndingShift ? 'Processando...' : 'Sim, Encerrar Agora'}
+                </button>
+                <button 
+                  onClick={() => setShowEndShiftConfirm(false)}
+                  disabled={isEndingShift}
+                  className="w-full bg-slate-700 hover:bg-slate-600 text-white font-black py-4 rounded-2xl uppercase text-xs transition-all active:scale-95"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

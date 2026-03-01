@@ -13,12 +13,12 @@ interface IndividualsListProps {
 const ITEMS_PER_PAGE = 12;
 
 const IndividualSkeleton = () => (
-  <div className="bg-slate-800/50 border border-slate-700/50 rounded-3xl h-[400px] animate-pulse overflow-hidden">
-    <div className="h-[230px] bg-slate-700/20"></div>
-    <div className="p-5 space-y-4">
+  <div className="bg-slate-800/50 border border-slate-700/50 rounded-3xl h-[110px] sm:h-[400px] animate-pulse overflow-hidden flex flex-row sm:flex-col">
+    <div className="w-28 sm:w-full h-full sm:h-[230px] bg-slate-700/20"></div>
+    <div className="flex-1 p-4 sm:p-5 space-y-3">
       <div className="h-4 bg-slate-700/30 rounded w-3/4"></div>
       <div className="h-2 bg-slate-700/20 rounded w-1/2"></div>
-      <div className="h-10 bg-slate-700/30 rounded-xl mt-4"></div>
+      <div className="hidden sm:block h-10 bg-slate-700/30 rounded-xl mt-4"></div>
     </div>
   </div>
 );
@@ -33,9 +33,9 @@ const IndividualCard = memo(({ ind, onEdit, onManagePhotos }: {
   return (
     <div 
       onClick={() => onEdit(ind)} 
-      className="bg-slate-800 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl hover:border-yellow-600/50 cursor-pointer flex flex-col group transition-all h-[420px] hover:shadow-yellow-600/10 active:scale-[0.98]"
+      className="bg-slate-800 border border-slate-700 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl hover:border-yellow-600/50 cursor-pointer flex flex-row sm:flex-col group transition-all h-[110px] sm:h-[420px] hover:shadow-yellow-600/10 active:scale-[0.98]"
     >
-      <div className="h-[230px] bg-slate-900 relative flex-shrink-0 overflow-hidden">
+      <div className="w-28 sm:w-full h-full sm:h-[230px] bg-slate-900 relative flex-shrink-0 overflow-hidden">
         {primaryPhoto ? (
           <img 
             src={primaryPhoto} 
@@ -45,40 +45,42 @@ const IndividualCard = memo(({ ind, onEdit, onManagePhotos }: {
           />
         ) : (
           <div className="h-full flex flex-col items-center justify-center opacity-10">
-            <i className="fas fa-user-secret text-7xl mb-4"></i>
+            <i className="fas fa-user-secret text-4xl sm:text-7xl mb-0 sm:mb-4"></i>
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60"></div>
       </div>
 
-      <div className="flex-1 p-5 flex flex-col justify-between bg-slate-800 border-t border-slate-700/50">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-xs font-black text-white uppercase truncate max-w-[70%] leading-none group-hover:text-yellow-500 transition-colors">
+      <div className="flex-1 p-3 sm:p-5 flex flex-col justify-between bg-slate-800 border-l sm:border-l-0 sm:border-t border-slate-700/50 min-w-0">
+        <div className="space-y-2 sm:space-y-3 min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
+            <h3 className="text-[10px] sm:text-xs font-black text-white uppercase truncate max-w-[85%] sm:max-w-[70%] leading-none group-hover:text-yellow-500 transition-colors">
               {ind.nome}
             </h3>
-            {ind.faccao && (
-              <span className="text-[7px] font-black px-1.5 py-0.5 bg-red-600/90 text-white rounded uppercase border border-red-500/30">
-                {ind.faccao}
-              </span>
-            )}
-            {ind.alcunha && (
-              <span className="text-[7px] font-black px-1.5 py-0.5 bg-yellow-600/90 text-white rounded uppercase border border-yellow-500/30">
-                "{ind.alcunha}"
-              </span>
-            )}
+            <div className="flex gap-1">
+              {ind.faccao && (
+                <span className="text-[6px] sm:text-[7px] font-black px-1 sm:py-0.5 bg-red-600/90 text-white rounded uppercase border border-red-500/30">
+                  {ind.faccao}
+                </span>
+              )}
+              {ind.alcunha && (
+                <span className="text-[6px] sm:text-[7px] font-black px-1 sm:py-0.5 bg-yellow-600/90 text-white rounded uppercase border border-yellow-500/30">
+                  "{ind.alcunha}"
+                </span>
+              )}
+            </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-700/50">
-            <div className="flex flex-col gap-1">
-              <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Nascimento</span>
-              <span className="text-[10px] text-slate-300 font-bold">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 pt-2 sm:pt-3 border-t border-slate-700/50">
+            <div className="flex flex-col gap-0.5 sm:gap-1">
+              <span className="text-[6px] sm:text-[8px] text-slate-500 font-black uppercase tracking-widest">Nascimento</span>
+              <span className="text-[8px] sm:text-[10px] text-slate-300 font-bold">
                 {ind.data_nascimento ? new Date(ind.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/I'}
               </span>
             </div>
-            <div className="flex flex-col gap-1 overflow-hidden">
-              <span className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Doc</span>
-              <span className="text-[10px] text-slate-300 font-bold truncate">
+            <div className="flex flex-col gap-0.5 sm:gap-1 overflow-hidden">
+              <span className="text-[6px] sm:text-[8px] text-slate-500 font-black uppercase tracking-widest">Doc</span>
+              <span className="text-[8px] sm:text-[10px] text-slate-300 font-bold truncate">
                 {ind.documento || 'N/I'}
               </span>
             </div>
@@ -87,9 +89,9 @@ const IndividualCard = memo(({ ind, onEdit, onManagePhotos }: {
 
         <button 
           onClick={(e) => { e.stopPropagation(); onManagePhotos(ind); }} 
-          className="mt-4 h-10 bg-slate-900 hover:bg-yellow-600 text-slate-500 hover:text-white rounded-xl flex items-center justify-center border border-slate-700 hover:border-yellow-500 transition-all shadow-lg uppercase text-[9px] font-black w-full"
+          className="mt-2 sm:mt-4 h-7 sm:h-10 bg-slate-900 hover:bg-yellow-600 text-slate-500 hover:text-white rounded-lg sm:rounded-xl flex items-center justify-center border border-slate-700 hover:border-yellow-500 transition-all shadow-lg uppercase text-[7px] sm:text-[9px] font-black w-full"
         >
-          <i className="fas fa-camera-retro mr-2"></i> Fotos
+          <i className="fas fa-camera-retro mr-1.5 sm:mr-2"></i> <span className="hidden sm:inline">Fotos</span><span className="sm:hidden">Mídia</span>
         </button>
       </div>
     </div>
@@ -201,7 +203,7 @@ const IndividualsList: React.FC<IndividualsListProps> = ({ user }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 px-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 px-4">
         {isLoading && individuals.length === 0 ? (
           Array.from({ length: 12 }).map((_, i) => <IndividualSkeleton key={i} />)
         ) : (
