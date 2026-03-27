@@ -24,11 +24,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         .from('usuarios_sgaft')
         .select('*')
         .eq('matricula', matricula.trim())
-        .eq('senha', senha)
+        .eq('senha', senha.trim())
         .single();
 
       if (dbError || !data) {
-        setError('Matrícula ou senha incorretos.');
+        if (dbError && dbError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+          setError(`Erro de conexão: ${dbError.message}`);
+        } else {
+          setError('Matrícula ou senha incorretos.');
+        }
       } else {
         const rawVal = data.primeiro_acesso;
         const normalizedPrimeiroAcesso = (
@@ -64,31 +68,31 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-950">
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-5"></div>
       
       <div className="relative z-10 w-full max-w-md">
-        <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-2xl backdrop-blur-xl">
+        <div className="bg-white border border-gray-200 p-8 rounded-[2.5rem] shadow-xl">
           <div className="flex flex-col items-center mb-10">
             <TacticalLogo size="xl" className="mb-6 rotate-3" />
-            <h1 className="text-4xl font-black text-white tracking-tighter">SGAFT</h1>
-            <p className="text-slate-500 mt-2 font-black uppercase text-[10px] tracking-[0.3em]">Força Tática - Gestão Operacional</p>
+            <h1 className="text-4xl font-black text-gray-900 tracking-tighter">SGAFT</h1>
+            <p className="text-gray-500 mt-2 font-black uppercase text-[10px] tracking-[0.3em]">Força Tática - Gestão Operacional</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">
                 Matrícula
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                   <i className="fas fa-id-card"></i>
                 </span>
                 <input
                   type="text"
                   value={matricula}
                   onChange={(e) => setMatricula(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-4 py-4 rounded-2xl focus:ring-2 focus:ring-yellow-600 outline-none transition-all font-bold"
+                  className="w-full bg-gray-100 border border-gray-200 text-gray-900 pl-12 pr-4 py-4 rounded-2xl focus:ring-2 focus:ring-gray-400 outline-none transition-all font-bold"
                   placeholder="ID Operacional"
                   required
                 />
@@ -96,18 +100,18 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2">
                 Senha
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                   <i className="fas fa-lock"></i>
                 </span>
                 <input
                   type="password"
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-white pl-12 pr-4 py-4 rounded-2xl focus:ring-2 focus:ring-yellow-600 outline-none transition-all font-bold"
+                  className="w-full bg-gray-100 border border-gray-200 text-gray-900 pl-12 pr-4 py-4 rounded-2xl focus:ring-2 focus:ring-gray-400 outline-none transition-all font-bold"
                   placeholder="••••••••"
                   required
                 />
@@ -115,7 +119,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             </div>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-3 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-3">
+              <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-3">
                 <i className="fas fa-exclamation-triangle"></i>
                 {error}
               </div>
@@ -124,7 +128,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-black py-5 rounded-2xl shadow-xl shadow-yellow-600/30 transition-all transform active:scale-95 flex items-center justify-center uppercase tracking-[0.2em] text-xs"
+              className="w-full bg-gray-900 hover:bg-gray-800 text-white font-black py-5 rounded-2xl shadow-lg shadow-gray-900/20 transition-all transform active:scale-95 flex items-center justify-center uppercase tracking-[0.2em] text-xs"
             >
               {isLoading ? (
                 <i className="fas fa-spinner fa-spin mr-2"></i>
@@ -138,7 +142,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </form>
 
           <div className="mt-12 text-center">
-            <p className="text-slate-700 text-[9px] font-black uppercase tracking-[0.4em]">
+            <p className="text-gray-400 text-[9px] font-black uppercase tracking-[0.4em]">
               SGAFT V2.9 • CREATED BY ALLAN JONES
             </p>
           </div>

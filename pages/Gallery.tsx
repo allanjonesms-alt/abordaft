@@ -17,7 +17,7 @@ interface IndividualWithPhoto extends Partial<Individual> {
 const CITIES = ['COXIM', 'SONORA', 'PEDRO GOMES', 'ALCINÓPOLIS', 'RIO VERDE'];
 
 const GallerySkeleton = () => (
-  <div className="aspect-[3/4] bg-slate-800/50 border border-slate-700/50 rounded-3xl animate-pulse"></div>
+  <div className="aspect-[3/4] bg-gray-100/50 border border-gray-200 rounded-3xl animate-pulse"></div>
 );
 
 const Gallery: React.FC = () => {
@@ -110,12 +110,12 @@ const Gallery: React.FC = () => {
     <div className="max-w-7xl mx-auto py-6 px-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
         <div className="flex items-center space-x-4">
-          <div className="bg-purple-600 p-3 rounded-2xl shadow-xl shadow-purple-600/30">
+          <div className="bg-blue-600 p-3 rounded-2xl shadow-xl shadow-blue-600/30">
             <i className="fas fa-images text-white text-2xl"></i>
           </div>
           <div>
-            <h2 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">Galeria de Capas</h2>
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2">Registros Ordenados por Nome</p>
+            <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter leading-none">Galeria de Capas</h2>
+            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-2">Registros Ordenados por Nome</p>
           </div>
         </div>
         
@@ -124,7 +124,7 @@ const Gallery: React.FC = () => {
             <button 
               key={city} 
               onClick={() => setActiveFilter(city)} 
-              className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${activeFilter === city ? 'bg-purple-600 border-purple-500 text-white shadow-xl scale-105' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500'}`}
+              className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase border transition-all ${activeFilter === city ? 'bg-blue-600 border-blue-500 text-white shadow-xl scale-105' : 'bg-gray-100 border-gray-200 text-gray-500 hover:border-gray-300'}`}
             >
               {city}
             </button>
@@ -142,18 +142,18 @@ const Gallery: React.FC = () => {
                 key={item.id} 
                 ref={index === data.length - 1 ? lastElementRef : null}
                 onClick={() => handleOpenProfile(item.id!)}
-                className="group relative aspect-[3/4] rounded-3xl border border-slate-700 overflow-hidden bg-black shadow-xl hover:border-purple-500/50 hover:scale-[1.03] cursor-pointer transition-all active:scale-95"
+                className="group relative aspect-[3/4] rounded-3xl border border-gray-200 overflow-hidden bg-white shadow-lg hover:border-blue-500/50 hover:scale-[1.03] cursor-pointer transition-all active:scale-95"
               >
                 <img 
                   src={item.fotos_individuos[0]?.path} 
-                  className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-all duration-700" 
+                  className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" 
                   loading="lazy" 
                   alt={item.nome}
                 />
                 
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent p-4 flex flex-col justify-end">
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/20 to-transparent p-4 flex flex-col justify-end">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <h4 className="text-white text-[9px] font-black uppercase tracking-tight truncate leading-tight group-hover:text-purple-400 transition-colors">
+                    <h4 className="text-white text-[9px] font-black uppercase tracking-tight truncate leading-tight group-hover:text-blue-400 transition-colors">
                       {item.nome}
                     </h4>
                     {item.faccao && (
@@ -176,9 +176,9 @@ const Gallery: React.FC = () => {
       </div>
 
       {data.length === 0 && !isLoading && (
-        <div className="flex flex-col items-center py-40 border border-slate-800 border-dashed rounded-[3rem]">
-          <i className="fas fa-camera-retro text-slate-800 text-5xl mb-4"></i>
-          <p className="text-slate-600 font-black uppercase text-xs tracking-[0.3em]">Nenhum registro com foto de capa nesta região</p>
+        <div className="flex flex-col items-center py-40 border border-gray-200 border-dashed rounded-[3rem]">
+          <i className="fas fa-camera-retro text-gray-300 text-5xl mb-4"></i>
+          <p className="text-gray-500 font-black uppercase text-xs tracking-[0.3em]">Nenhum registro com foto de capa nesta região</p>
         </div>
       )}
 

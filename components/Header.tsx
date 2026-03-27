@@ -94,34 +94,34 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
 
   return (
     <>
-      <header className="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-50 shadow-lg">
+      <header className="bg-white border-b border-gray-200 p-4 sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button 
               onClick={handleBack}
-              className={`p-2 hover:bg-slate-700 rounded-full transition-all ${isHome ? 'opacity-30 cursor-not-allowed' : 'active:scale-90'}`}
+              className={`p-2 hover:bg-gray-100 rounded-full transition-all ${isHome ? 'opacity-30 cursor-not-allowed' : 'active:scale-90'}`}
               disabled={isHome}
             >
-              <i className="fas fa-arrow-left text-xl text-gray-300"></i>
+              <i className="fas fa-arrow-left text-xl text-gray-600"></i>
             </button>
             
             <Link to="/" className="flex items-center space-x-2 group">
               <TacticalLogo size="md" className="group-hover:scale-110 transition-transform" />
-              <h1 className="text-2xl font-black tracking-tighter text-white">SGAFT</h1>
+              <h1 className="text-2xl font-black tracking-tighter text-gray-900">SGAFT</h1>
             </Link>
           </div>
 
           <div className="flex items-center space-x-2 md:space-x-4">
             {activeShift ? (
-              <div className="flex items-center bg-slate-900 rounded-xl border border-slate-700 px-3 py-1.5 gap-3">
+              <div className="flex items-center bg-gray-100 rounded-xl border border-gray-200 px-3 py-1.5 gap-3">
                 <div className="flex flex-col items-end hidden sm:flex">
-                  <span className="text-[8px] font-black text-green-500 uppercase tracking-widest animate-pulse">Serviço Ativo</span>
-                  <span className="text-[10px] font-bold text-white uppercase">CMD: {activeShift.comandante}</span>
+                  <span className="text-[8px] font-black text-green-600 uppercase tracking-widest animate-pulse">Serviço Ativo</span>
+                  <span className="text-[10px] font-bold text-gray-900 uppercase">CMD: {activeShift.comandante}</span>
                 </div>
                 <button 
                   onClick={() => setShowEndShiftConfirm(true)}
                   disabled={isEndingShift}
-                  className={`${isEndingShift ? 'bg-slate-700' : 'bg-red-600 hover:bg-red-500'} text-white w-10 h-10 rounded-lg shadow-lg flex items-center justify-center transition-all active:scale-95`}
+                  className={`${isEndingShift ? 'bg-gray-200' : 'bg-red-600 hover:bg-red-500'} text-white w-10 h-10 rounded-lg shadow-md flex items-center justify-center transition-all active:scale-95`}
                   title="Encerrar Serviço"
                 >
                   {isEndingShift ? (
@@ -134,18 +134,18 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
             ) : (
               <button 
                 onClick={() => setIsStartShiftModalOpen(true)}
-                className="bg-green-600 hover:bg-green-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                className="bg-green-600 hover:bg-green-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md active:scale-95 flex items-center gap-2"
               >
                 <i className="fas fa-play"></i>
                 <span className="hidden sm:inline">Iniciar</span>
               </button>
             )}
 
-            <div className="h-8 w-px bg-slate-700 mx-1"></div>
+            <div className="h-8 w-px bg-gray-200 mx-1"></div>
 
             <Link 
               to="/" 
-              className={`p-2 rounded-lg transition-all flex items-center justify-center ${isHome ? 'bg-yellow-600/20 text-yellow-500' : 'text-gray-400 hover:bg-slate-700 hover:text-white'}`}
+              className={`p-2 rounded-lg transition-all flex items-center justify-center ${isHome ? 'bg-yellow-100 text-yellow-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
             >
               <i className="fas fa-home text-lg"></i>
             </Link>
@@ -153,7 +153,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
             {user?.role === UserRole.ADMIN && (
               <Link 
                 to="/configuracoes" 
-                className={`p-2 rounded-lg transition-all flex items-center justify-center ${location.pathname === '/configuracoes' ? 'bg-yellow-600/20 text-yellow-500' : 'text-gray-400 hover:bg-slate-700 hover:text-white'}`}
+                className={`p-2 rounded-lg transition-all flex items-center justify-center ${location.pathname === '/configuracoes' ? 'bg-yellow-100 text-yellow-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}`}
               >
                 <i className="fas fa-cog text-lg"></i>
               </Link>
@@ -161,7 +161,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
 
             <button 
               onClick={onLogout}
-              className="flex items-center space-x-2 bg-slate-900 border border-slate-700 hover:bg-slate-700 text-white px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
+              className="flex items-center space-x-2 bg-gray-100 border border-gray-200 hover:bg-gray-200 text-gray-900 px-3 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
             >
               <i className="fas fa-sign-out-alt text-red-500"></i>
             </button>

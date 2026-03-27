@@ -1,4 +1,7 @@
 
+-- 0. Habilitar extensões necessárias
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 -- 1. Reinicialização da tabela para garantir integridade e ordem das colunas
 DROP TABLE IF EXISTS usuarios_sgaft CASCADE;
 
@@ -60,6 +63,10 @@ CREATE TABLE IF NOT EXISTS individuos (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Índices para busca rápida
+CREATE INDEX IF NOT EXISTS idx_individuos_nome ON individuos USING gin (nome gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_individuos_documento ON individuos (documento);
+
 CREATE TABLE IF NOT EXISTS fotos_individuos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     individuo_id UUID REFERENCES individuos(id) ON DELETE CASCADE,
@@ -69,6 +76,8 @@ CREATE TABLE IF NOT EXISTS fotos_individuos (
     created_by TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS idx_fotos_individuo_id ON fotos_individuos (individuo_id);
 
 CREATE TABLE IF NOT EXISTS abordagens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -83,3 +92,6 @@ CREATE TABLE IF NOT EXISTS abordagens (
     foto_path TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS idx_abordagens_data ON abordagens (data DESC);
+CREATE INDEX IF NOT EXISTS idx_abordagens_individuo_id ON abordagens (individuo_id);

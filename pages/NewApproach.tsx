@@ -35,6 +35,7 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
   const residentialAddressRef = useRef<HTMLInputElement>(null);
   const autocompleteInstance = useRef<any>(null);
   const autocompleteRef = useRef<HTMLDivElement>(null);
+  const [isMapOpen, setIsMapOpen] = useState(false);
 
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [checkingShift, setCheckingShift] = useState(true);
@@ -64,7 +65,47 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
   const [isSearching, setIsSearching] = useState(false);
 
   const [photos, setPhotos] = useState<PhotoRecordUI[]>([]);
-  const [isMapOpen, setIsMapOpen] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach((file: File) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          setPhotos(prev => {
+            const isFirst = prev.length === 0;
+            const newPhoto: PhotoRecordUI = {
+              id: 'temp-' + Math.random().toString(36).substr(2, 9),
+              data: base64String,
+              isPrincipal: isFirst
+            };
+            return [...prev, newPhoto];
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removePhoto = (id: string) => {
+    setPhotos(prev => {
+      const filtered = prev.filter(p => p.id !== id);
+      if (filtered.length > 0 && !filtered.some(p => p.isPrincipal)) {
+        filtered[0].isPrincipal = true;
+      }
+      return filtered;
+    });
+  };
+
+  const setAsPrimary = (id: string) => {
+    setPhotos(prev => prev.map(p => ({
+      ...p,
+      isPrincipal: p.id === id
+    })));
+  };
+
   const [isSaving, setIsSaving] = useState(false);
   const [cpfError, setCpfError] = useState(false);
   const [isManualDateTime, setIsManualDateTime] = useState(false);
@@ -304,7 +345,7 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
         indId = newInd.id;
       }
 
-      const { error: appError } = await supabase
+      const { data: newApproach, error: appError } = await supabase
         .from('abordagens')
         .insert([{
           data: approachData.data,
@@ -314,9 +355,27 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
           individuo_id: indId,
           individuo_nome: individualData.nome.toUpperCase(),
           relatorio: `Abordagem registrada via Terminal SGAFT. Dados ${selectedIndId ? 'atualizados' : 'cadastrados'} no momento da ação.`
-        }]);
+        }])
+        .select()
+        .single();
 
       if (appError) throw appError;
+
+      // Salvar fotos da abordagem
+      if (photos.length > 0 && newApproach) {
+        const photosToInsert = photos.map((p) => ({
+          abordagem_id: newApproach.id,
+          path: p.data,
+          is_primary: p.isPrincipal,
+          created_by: user?.nome || 'Operador'
+        }));
+
+        const { error: photoError } = await supabase
+          .from('fotos_abordagens')
+          .insert(photosToInsert);
+        
+        if (photoError) throw photoError;
+      }
 
       alert('Registro finalizado com sucesso!');
       navigate('/abordagens');
@@ -342,22 +401,22 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
     <div className="max-w-4xl mx-auto py-6 px-4">
       <div className="flex items-center justify-between mb-8 gap-4">
         <div className="flex items-center space-x-4">
-          <div className="bg-blue-600 p-3 rounded-2xl shadow-xl shadow-blue-600/20">
+          <div className="bg-blue-600 p-3 rounded-2xl shadow-xl shadow-blue-600/10">
             <i className="fas fa-file-signature text-white text-2xl"></i>
           </div>
           <div>
-            <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Nova Abordagem</h2>
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2">
+            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter leading-none">Nova Abordagem</h2>
+            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-2">
               {activeShift ? `CMD: ${activeShift.comandante}` : 'REGISTRO ADMIN'}
             </p>
           </div>
         </div>
-        <div className="bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl flex items-center gap-3">
+        <div className="bg-white border border-gray-200 px-4 py-2 rounded-xl flex items-center gap-3">
           {isEditingDateTime ? (
             <div className="flex items-center gap-2">
               <input 
                 type="date" 
-                className="bg-slate-900 border border-slate-700 text-white px-2 py-1 rounded text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                className="bg-gray-100 border border-gray-200 text-gray-900 px-2 py-1 rounded text-xs outline-none focus:ring-1 focus:ring-blue-500"
                 value={approachData.data}
                 onChange={e => {
                   setIsManualDateTime(true);
@@ -366,7 +425,7 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
               />
               <input 
                 type="time" 
-                className="bg-slate-900 border border-slate-700 text-white px-2 py-1 rounded text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                className="bg-gray-100 border border-gray-200 text-gray-900 px-2 py-1 rounded text-xs outline-none focus:ring-1 focus:ring-blue-500"
                 value={approachData.horario}
                 onChange={e => {
                   setIsManualDateTime(true);
@@ -376,7 +435,7 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
               <button 
                 type="button"
                 onClick={() => setIsEditingDateTime(false)}
-                className="text-green-500 hover:text-green-400 ml-1"
+                className="text-green-600 hover:text-green-500 ml-1"
               >
                 <i className="fas fa-check"></i>
               </button>
@@ -384,17 +443,17 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
           ) : (
             <>
               <div className="text-right">
-                <div className="text-xs font-black text-white tracking-wider">
+                <div className="text-xs font-black text-gray-900 tracking-wider">
                   {approachData.data ? approachData.data.split('-').reverse().join('/') : ''}
                 </div>
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
                   {approachData.horario} (UTC-4)
                 </div>
               </div>
               <button 
                 type="button"
                 onClick={() => setIsEditingDateTime(true)}
-                className="text-slate-400 hover:text-blue-400 transition-colors bg-slate-700/50 p-2 rounded-lg"
+                className="text-gray-500 hover:text-blue-600 transition-colors bg-gray-100 p-2 rounded-lg"
                 title="Alterar Data/Hora"
               >
                 <i className="fas fa-clock"></i>
@@ -405,22 +464,22 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8 pb-12">
-        <div className="bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-700 pb-4">
-            <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center">
-              <i className="fas fa-map-marked-alt text-blue-500 mr-2"></i> Localização e Ocorrência
+        <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-200 shadow-xl space-y-6">
+          <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+            <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest flex items-center">
+              <i className="fas fa-map-marked-alt text-blue-600 mr-2"></i> Localização e Ocorrência
             </h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Local da Abordagem</label>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Local da Abordagem</label>
               <div className="relative group">
                 <input 
                   type="text" 
                   readOnly
                   placeholder="Selecione no mapa..."
-                  className="w-full bg-slate-900 border border-slate-700 text-white pl-4 pr-12 py-4 rounded-2xl outline-none font-bold text-sm cursor-default" 
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-900 pl-4 pr-12 py-4 rounded-2xl outline-none font-bold text-sm cursor-default" 
                   value={approachData.local}
                 />
                 <button 
@@ -434,10 +493,10 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
             </div>
             
             <div className="md:col-span-2">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Apreensões</label>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Apreensões</label>
               <input 
                 type="text" 
-                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm" 
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 p-4 rounded-2xl outline-none font-bold text-sm" 
                 placeholder="Armas, drogas, objetos..." 
                 value={approachData.objetos} 
                 onChange={e => setApproachData({...approachData, objetos: e.target.value})}
@@ -446,13 +505,13 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
           </div>
         </div>
 
-        <div className="bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl space-y-6">
-          <div className="border-b border-slate-700 pb-4 flex justify-between items-center">
-            <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center">
-              <i className="fas fa-user-shield text-yellow-500 mr-2"></i> Identificação do Abordado
+        <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-200 shadow-xl space-y-6">
+          <div className="border-b border-gray-200 pb-4 flex justify-between items-center">
+            <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest flex items-center">
+              <i className="fas fa-user-shield text-yellow-600 mr-2"></i> Identificação do Abordado
             </h3>
             {selectedIndId && (
-              <span className="text-[8px] font-black bg-yellow-600/20 text-yellow-500 px-2 py-1 rounded-lg border border-yellow-600/30 uppercase tracking-widest">
+              <span className="text-[8px] font-black bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg border border-yellow-200 uppercase tracking-widest">
                 Perfil Sincronizado
               </span>
             )}
@@ -460,11 +519,11 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2 relative" ref={autocompleteRef}>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nome Completo</label>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Nome Completo</label>
               <div className="relative">
                 <input 
                   type="text" 
-                  className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm uppercase focus:ring-2 focus:ring-yellow-600 transition-all" 
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-900 p-4 rounded-2xl outline-none font-bold text-sm uppercase focus:ring-2 focus:ring-yellow-600 transition-all" 
                   placeholder="NOME OU BUSCA DE REGISTRO..." 
                   value={individualData.nome} 
                   onChange={e => handleNameChange(e.target.value)}
@@ -475,21 +534,21 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
               </div>
 
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-50 left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute z-50 left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                   {suggestions.map((ind) => (
                     <div 
                       key={ind.id} 
                       onClick={() => selectIndividual(ind)}
-                      className="p-4 hover:bg-slate-800 cursor-pointer border-b border-slate-800 last:border-0 flex items-center justify-between group transition-colors"
+                      className="p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0 flex items-center justify-between group transition-colors"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-white font-black text-xs uppercase truncate group-hover:text-yellow-500 transition-colors">{ind.nome}</p>
+                        <p className="text-gray-900 font-black text-xs uppercase truncate group-hover:text-yellow-700 transition-colors">{ind.nome}</p>
                         <div className="flex gap-2 mt-1">
-                          <span className="text-[8px] text-slate-500 font-bold uppercase">Vulgo: {ind.alcunha || 'N/I'}</span>
-                          {ind.faccao && <span className="text-[8px] text-red-500 font-bold uppercase tracking-widest">• {ind.faccao}</span>}
+                          <span className="text-[8px] text-gray-500 font-bold uppercase">Vulgo: {ind.alcunha || 'N/I'}</span>
+                          {ind.faccao && <span className="text-[8px] text-red-600 font-bold uppercase tracking-widest">• {ind.faccao}</span>}
                         </div>
                       </div>
-                      <i className="fas fa-chevron-right text-slate-700 group-hover:text-yellow-500 transition-all ml-4"></i>
+                      <i className="fas fa-chevron-right text-gray-300 group-hover:text-yellow-600 transition-all ml-4"></i>
                     </div>
                   ))}
                 </div>
@@ -497,10 +556,10 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
             </div>
             
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Alcunha</label>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Alcunha</label>
               <input 
                 type="text" 
-                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm" 
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 p-4 rounded-2xl outline-none font-bold text-sm" 
                 placeholder="VULGO"
                 value={individualData.alcunha} 
                 onChange={e => setIndividualData(prev => ({...prev, alcunha: e.target.value}))} 
@@ -508,10 +567,10 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">CPF</label>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">CPF</label>
               <input 
                 type="text" 
-                className={`w-full bg-slate-900 border ${cpfError ? 'border-red-500' : 'border-slate-700'} text-white p-4 rounded-2xl outline-none font-bold text-sm`} 
+                className={`w-full bg-gray-50 border ${cpfError ? 'border-red-500' : 'border-gray-200'} text-gray-900 p-4 rounded-2xl outline-none font-bold text-sm`} 
                 value={individualData.documento} 
                 onChange={handleCpfChange} 
                 maxLength={14} 
@@ -520,20 +579,20 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Data Nasc.</label>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Data Nasc.</label>
               <input 
                 type="date" 
-                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm" 
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 p-4 rounded-2xl outline-none font-bold text-sm" 
                 value={individualData.data_nascimento} 
                 onChange={e => setIndividualData(prev => ({...prev, data_nascimento: e.target.value}))} 
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Mãe</label>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Mãe</label>
               <input 
                 type="text" 
-                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm uppercase" 
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 p-4 rounded-2xl outline-none font-bold text-sm uppercase" 
                 placeholder="NOME DA MÃE"
                 value={individualData.mae} 
                 onChange={e => setIndividualData(prev => ({...prev, mae: e.target.value.toUpperCase()}))} 
@@ -541,30 +600,30 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Residência</label>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Residência</label>
               <div className="relative group">
                 <input 
                   type="text" 
                   ref={residentialAddressRef} 
-                  className="w-full bg-slate-900 border border-slate-700 text-white pl-10 pr-4 py-4 rounded-2xl outline-none focus:ring-2 focus:ring-yellow-600 transition-all font-bold text-sm" 
+                  className="w-full bg-gray-50 border border-gray-200 text-gray-900 pl-10 pr-4 py-4 rounded-2xl outline-none focus:ring-2 focus:ring-yellow-600 transition-all font-bold text-sm" 
                   placeholder="Buscar endereço..." 
                   defaultValue={individualData.endereco_residencial} 
                 />
-                <i className="fas fa-search-location absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-yellow-600 transition-all"></i>
+                <i className="fas fa-search-location absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-yellow-600 transition-all"></i>
               </div>
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Facção</label>
-              <select className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none appearance-none font-bold text-sm" value={individualData.faccao} onChange={e => setIndividualData(prev => ({...prev, faccao: e.target.value}))}>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Facção</label>
+              <select className="w-full bg-gray-50 border border-gray-200 text-gray-900 p-4 rounded-2xl outline-none appearance-none font-bold text-sm" value={individualData.faccao} onChange={e => setIndividualData(prev => ({...prev, faccao: e.target.value}))}>
                 {FACCOES_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
             </div>
 
             <div className="md:col-span-3">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Observações / Histórico Relevante</label>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">Observações / Histórico Relevante</label>
               <textarea 
-                className="w-full bg-slate-900 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold text-sm min-h-[100px] resize-none" 
+                className="w-full bg-gray-50 border border-gray-200 text-gray-900 p-4 rounded-2xl outline-none font-bold text-sm min-h-[100px] resize-none" 
                 placeholder="Informações adicionais sobre o abordado..."
                 value={individualData.observacao} 
                 onChange={e => setIndividualData(prev => ({...prev, observacao: e.target.value}))}
@@ -573,8 +632,38 @@ const NewApproach: React.FC<NewApproachProps> = ({ user }) => {
           </div>
         </div>
 
-        <div className="bg-slate-800 p-6 md:p-8 rounded-3xl border border-slate-700 shadow-2xl flex flex-col sm:flex-row gap-4">
-          <button type="button" onClick={() => navigate(-1)} className="flex-1 bg-slate-700 text-white font-black py-4 rounded-2xl uppercase text-xs">Sair</button>
+        <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-200 shadow-xl space-y-6">
+          <div className="border-b border-gray-200 pb-4 flex justify-between items-center">
+            <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest flex items-center">
+              <i className="fas fa-camera-retro text-blue-600 mr-2"></i> Registro Fotográfico
+            </h3>
+            <button 
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+            >
+              <i className="fas fa-plus mr-2"></i> Adicionar
+            </button>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple accept="image/*" capture="environment" />
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {photos.map((photo) => (
+              <div key={photo.id} className={`relative aspect-square rounded-2xl border-2 overflow-hidden transition-all group ${photo.isPrincipal ? 'border-blue-600 ring-4 ring-blue-600/10' : 'border-gray-200'}`}>
+                <img src={photo.data} className="w-full h-full object-cover" alt="Registro" />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-2">
+                  {!photo.isPrincipal && (
+                    <button type="button" onClick={() => setAsPrimary(photo.id)} className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center"><i className="fas fa-star text-xs"></i></button>
+                  )}
+                  <button type="button" onClick={() => removePhoto(photo.id)} className="bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center"><i className="fas fa-trash-alt text-xs"></i></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white p-6 md:p-8 rounded-3xl border border-gray-200 shadow-xl flex flex-col sm:flex-row gap-4">
+          <button type="button" onClick={() => navigate(-1)} className="flex-1 bg-gray-200 text-gray-900 font-black py-4 rounded-2xl uppercase text-xs">Sair</button>
           <button type="submit" disabled={isSaving} className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl transition-all flex items-center justify-center uppercase text-sm">
             {isSaving ? <i className="fas fa-spinner fa-spin mr-3"></i> : <i className="fas fa-save mr-3"></i>} 
             {isSaving ? 'Sincronizando...' : (selectedIndId ? 'Atualizar e Registrar' : 'Cadastrar e Registrar')}

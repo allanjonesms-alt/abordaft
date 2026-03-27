@@ -238,28 +238,28 @@ const MapPage: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen -m-4 md:-m-6">
-      <div className="bg-slate-900 p-4 border-b border-slate-700 flex justify-between items-center z-10">
+      <div className="bg-white p-4 border-b border-gray-200 flex justify-between items-center z-10">
         <div className="flex items-center space-x-4">
           <button 
             onClick={() => navigate(-1)}
-            className="bg-slate-800 hover:bg-slate-700 text-white w-10 h-10 rounded-xl flex items-center justify-center transition-all"
+            className="bg-gray-100 hover:bg-gray-200 text-gray-900 w-10 h-10 rounded-xl flex items-center justify-center transition-all"
           >
             <i className="fas fa-chevron-left"></i>
           </button>
           <div>
-            <h2 className="text-white font-black uppercase tracking-tighter text-xl leading-none">Mapa Tático</h2>
+            <h2 className="text-gray-900 font-black uppercase tracking-tighter text-xl leading-none">Mapa Tático</h2>
             <div className="flex gap-3 mt-1">
-              <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest flex items-center">
+              <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest flex items-center">
                 <i className="fas fa-circle mr-1 text-[6px]"></i> {markersCount.abordagens} Abordagens
               </span>
-              <span className="text-[8px] font-black text-yellow-500 uppercase tracking-widest flex items-center">
+              <span className="text-[8px] font-black text-yellow-600 uppercase tracking-widest flex items-center">
                 <i className="fas fa-circle mr-1 text-[6px]"></i> {markersCount.residencias} Residências
               </span>
             </div>
           </div>
         </div>
-        <div className="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 hidden sm:block">
-           <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Monitoramento Ativo</span>
+        <div className="bg-gray-100 px-4 py-2 rounded-xl border border-gray-200 hidden sm:block">
+           <span className="text-[8px] font-black text-green-600 uppercase tracking-widest">Monitoramento Ativo</span>
         </div>
       </div>
 
@@ -267,27 +267,27 @@ const MapPage: React.FC = () => {
         <div ref={mapRef} className="w-full h-full"></div>
         
         {isLoading && (
-          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center z-20">
-            <i className="fas fa-satellite-dish fa-spin text-blue-500 text-5xl mb-6"></i>
-            <h3 className="text-white font-black uppercase tracking-[0.3em] text-xs">Sincronizando Inteligência Geográfica...</h3>
-            <div className="w-64 h-1 bg-slate-800 rounded-full mt-6 overflow-hidden">
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-md flex flex-col items-center justify-center z-20">
+            <i className="fas fa-satellite-dish fa-spin text-blue-600 text-5xl mb-6"></i>
+            <h3 className="text-gray-900 font-black uppercase tracking-[0.3em] text-xs">Sincronizando Inteligência Geográfica...</h3>
+            <div className="w-64 h-1 bg-gray-200 rounded-full mt-6 overflow-hidden">
               <div 
-                className="h-full bg-blue-500 transition-all duration-300" 
+                className="h-full bg-blue-600 transition-all duration-300" 
                 style={{ width: `${(progress.current / progress.total) * 100}%` }}
               ></div>
             </div>
-            <p className="text-slate-500 text-[10px] mt-4 uppercase font-bold">
+            <p className="text-gray-500 text-[10px] mt-4 uppercase font-bold">
               Processando {progress.current} de {progress.total} registros táticos
             </p>
           </div>
         )}
 
         {error && (
-          <div className="absolute inset-0 bg-slate-900 flex items-center justify-center p-8 text-center z-30">
-            <div className="bg-slate-800 p-8 rounded-3xl border border-red-500/50 shadow-2xl max-w-md">
-              <i className="fas fa-exclamation-triangle text-red-500 text-5xl mb-6"></i>
-              <h3 className="text-white font-black uppercase mb-2">Falha Crítica no Mapeamento</h3>
-              <p className="text-slate-400 text-sm mb-8 leading-relaxed">{error}</p>
+          <div className="absolute inset-0 bg-white flex items-center justify-center p-8 text-center z-30">
+            <div className="bg-gray-100 p-8 rounded-3xl border border-red-500/50 shadow-2xl max-w-md">
+              <i className="fas fa-exclamation-triangle text-red-600 text-5xl mb-6"></i>
+              <h3 className="text-gray-900 font-black uppercase mb-2">Falha Crítica no Mapeamento</h3>
+              <p className="text-gray-500 text-sm mb-8 leading-relaxed">{error}</p>
               <button 
                 onClick={() => window.location.reload()} 
                 className="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded-2xl font-black uppercase text-xs transition-all"

@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS servicos_vtr (
     status TEXT DEFAULT 'ATIVO' CHECK (status IN ('ATIVO', 'ENCERRADO'))
 );
 
+-- Índice para busca rápida de serviço ativo
+CREATE INDEX IF NOT EXISTS idx_servicos_vtr_status_inicio ON servicos_vtr (status, horario_inicio DESC);
+
 -- Habilitar RLS
 ALTER TABLE servicos_vtr ENABLE ROW LEVEL SECURITY;
 
