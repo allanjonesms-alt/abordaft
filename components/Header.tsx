@@ -95,7 +95,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
   return (
     <>
       <header className="bg-white border-b border-gray-200 p-4 sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto flex items-center justify-between">
+        <div className="w-full px-4 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <button 
               onClick={handleBack}

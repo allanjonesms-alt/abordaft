@@ -65,7 +65,7 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-white text-gray-900">
       <Header user={auth.user} onLogout={handleLogout} />
-      <main className="flex-1 container mx-auto p-4 md:p-6 pb-24">
+      <main className="flex-1 w-full p-4 md:p-6 pb-24 overflow-x-hidden">
         <Routes>
           <Route path="/" element={<Dashboard user={auth.user} />} />
           <Route path="/nova-abordagem" element={<NewApproach user={auth.user} />} />

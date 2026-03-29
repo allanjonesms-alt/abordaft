@@ -23,9 +23,9 @@ const ApproachCard = memo(({ app, onClick }: { app: any; onClick: () => void }) 
   return (
     <div 
       onClick={onClick}
-      className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xl hover:border-blue-600/50 hover:bg-gray-50 transition-all group flex h-32 cursor-pointer active:scale-[0.99]"
+      className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-xl hover:border-blue-600/50 hover:bg-gray-50 transition-all group flex h-24 sm:h-32 cursor-pointer active:scale-[0.99]"
     >
-      <div className="w-32 h-full flex-shrink-0 bg-gray-100 border-r border-gray-200 overflow-hidden">
+      <div className="w-20 h-20 sm:w-32 sm:h-full flex-shrink-0 bg-gray-100 border-r border-gray-200 overflow-hidden">
         {primaryPhoto ? (
           <img src={primaryPhoto} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 opacity-80 group-hover:opacity-100" loading="lazy" />
         ) : (
@@ -33,11 +33,11 @@ const ApproachCard = memo(({ app, onClick }: { app: any; onClick: () => void }) 
         )}
       </div>
 
-      <div className="flex-1 p-5 flex flex-col justify-between">
+      <div className="flex-1 p-4 sm:p-5 flex flex-col justify-between">
         <div className="flex justify-between items-start gap-4">
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight truncate">
+              <h3 className="text-xs sm:text-sm font-black text-gray-900 uppercase tracking-tight truncate">
                 {app.individuo_nome || 'INDIVÍDUO N/I'}
               </h3>
               {faccao && (
