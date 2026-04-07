@@ -33,7 +33,7 @@ const IndividualCard = memo(({ ind, onEdit, onManagePhotos }: {
   return (
     <div 
       onClick={() => onEdit(ind)} 
-      className="bg-white border border-gray-200 rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg hover:border-blue-600/50 cursor-pointer group transition-all h-auto hover:shadow-blue-600/10 active:scale-[0.98]"
+      className="w-full bg-white border border-gray-200 rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg hover:border-blue-600/50 cursor-pointer group transition-all h-auto hover:shadow-blue-600/10 active:scale-[0.98]"
     >
       <div className="flex-1 p-3 sm:p-5 flex flex-col justify-between bg-white min-w-0">
         <div className="space-y-2 sm:space-y-3 min-w-0">
@@ -91,6 +91,8 @@ const IndividualsList: React.FC<IndividualsListProps> = ({ user }) => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [faccoes, setFaccoes] = useState<string[]>([]);
+  const [selectedFaccao, setSelectedFaccao] = useState<string>('TODAS');
   const [editingIndividual, setEditingIndividual] = useState<Individual | null>(null);
   const [managingPhotosIndividual, setManagingPhotosIndividual] = useState<Individual | null>(null);
   const [isAddingIndividual, setIsAddingIndividual] = useState(false);
@@ -98,6 +100,21 @@ const IndividualsList: React.FC<IndividualsListProps> = ({ user }) => {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
+
+  useEffect(() => {
+    const fetchFaccoes = async () => {
+      const { data, error } = await supabase
+        .from('individuos')
+        .select('faccao')
+        .not('faccao', 'is', null);
+      
+      if (!error && data) {
+        const uniqueFaccoes = Array.from(new Set(data.map(i => i.faccao))).filter(Boolean) as string[];
+        setFaccoes(uniqueFaccoes.sort());
+      }
+    };
+    fetchFaccoes();
+  }, []);
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedSearch(search), 400);
@@ -114,7 +131,7 @@ const IndividualsList: React.FC<IndividualsListProps> = ({ user }) => {
     if (node) observerRef.current.observe(node);
   }, [isLoadingMore, isLoading, hasMore]);
 
-  const fetchIndividuals = useCallback(async (currentPage: number, isInitial: boolean = false, searchTerm: string = '') => {
+  const fetchIndividuals = useCallback(async (currentPage: number, isInitial: boolean = false, searchTerm: string = '', faccao: string = 'TODAS') => {
     if (isInitial) setIsLoading(true);
     else setIsLoadingMore(true);
 
@@ -129,6 +146,10 @@ const IndividualsList: React.FC<IndividualsListProps> = ({ user }) => {
       if (searchTerm.trim()) {
         const s = `%${searchTerm.trim()}%`;
         query = query.or(`nome.ilike.${s},alcunha.ilike.${s},documento.ilike.${s}`);
+      }
+
+      if (faccao !== 'TODAS') {
+        query = query.eq('faccao', faccao);
       }
 
       const { data, error, count } = await query
@@ -148,8 +169,8 @@ const IndividualsList: React.FC<IndividualsListProps> = ({ user }) => {
 
   useEffect(() => {
     setPage(0);
-    fetchIndividuals(0, true, debouncedSearch);
-  }, [debouncedSearch, fetchIndividuals]);
+    fetchIndividuals(0, true, debouncedSearch, selectedFaccao);
+  }, [debouncedSearch, selectedFaccao, fetchIndividuals]);
 
   useEffect(() => {
     if (page > 0) fetchIndividuals(page, false, debouncedSearch);
@@ -171,6 +192,14 @@ const IndividualsList: React.FC<IndividualsListProps> = ({ user }) => {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+          <select
+            value={selectedFaccao}
+            onChange={(e) => setSelectedFaccao(e.target.value)}
+            className="bg-white border border-gray-200 text-gray-900 px-4 py-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-600 transition-all font-bold text-sm"
+          >
+            <option value="TODAS">Todas as Facções</option>
+            {faccoes.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
           <div className="relative flex-1 sm:w-80">
             <input 
               type="text" 
@@ -190,13 +219,13 @@ const IndividualsList: React.FC<IndividualsListProps> = ({ user }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 px-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 px-4">
         {isLoading && individuals.length === 0 ? (
           Array.from({ length: 12 }).map((_, i) => <IndividualSkeleton key={i} />)
         ) : (
           <>
             {individuals.map((ind, index) => (
-              <div key={ind.id} ref={index === individuals.length - 1 ? lastElementRef : null}>
+              <div key={ind.id} className="w-full" ref={index === individuals.length - 1 ? lastElementRef : null}>
                 <IndividualCard ind={ind} onEdit={setEditingIndividual} onManagePhotos={setManagingPhotosIndividual} />
               </div>
             ))}

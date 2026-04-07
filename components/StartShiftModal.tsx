@@ -51,7 +51,7 @@ const ViaturaDiagram = ({ assignments, onDrop, activeRole, onRoleSelect }: {
       <div 
         onClick={() => onRoleSelect?.(role)}
         className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center p-1.5 rounded-xl transition-all duration-300 border-2 
-          ${isSelected ? 'ring-2 ring-yellow-500 border-yellow-500 bg-yellow-600/20 scale-105 z-20' : isOver ? 'bg-green-600/30 border-green-500 scale-105' : isOccupied ? 'bg-slate-900/90 border-slate-600 shadow-lg border-solid' : 'bg-slate-800/20 border-slate-700/50 border-dashed'}
+          ${isSelected ? 'ring-2 ring-yellow-500 border-yellow-500 bg-yellow-900/80 scale-105 z-20' : isOver ? 'bg-green-900/80 border-green-500 scale-105' : isOccupied ? 'bg-slate-800 border-slate-600 shadow-lg border-solid' : 'bg-slate-900/60 border-slate-700 border-dashed'}
           cursor-pointer
         `}
         style={{ left: x, top: y, width: '100px', height: '64px' }}
@@ -223,31 +223,29 @@ const StartShiftModal: React.FC<StartShiftModalProps> = ({ user, onClose, onStar
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-2 flex flex-col sm:grid sm:grid-cols-3 gap-1.5 content-start custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-2 grid grid-cols-3 gap-1.5 content-start custom-scrollbar">
             {/* Desktop View: Grid of Cards */}
-            <div className="hidden sm:grid grid-cols-3 gap-1.5 w-full">
-              {filteredOperators.map(op => {
-                const isAssigned = Object.values(assignments).includes(op.nome.toUpperCase());
-                return (
-                  <div 
-                    key={op.id}
-                    draggable={!isAssigned}
-                    onDragStart={(e) => handleDragStart(e, op.nome.toUpperCase())}
-                    className={`p-0 rounded-xl border transition-all flex items-center gap-1.5 cursor-grab active:cursor-grabbing group min-w-0 h-9
-                      ${isAssigned ? 'bg-slate-950/40 border-slate-800 opacity-30 cursor-not-allowed' : 'bg-green-600/30 border-green-500/20 hover:border-green-400 hover:bg-green-600/40 shadow-sm'}
-                    `}
-                  >
-                    <div className={`w-6 h-full flex items-center justify-center flex-shrink-0 rounded-l-xl ${isAssigned ? 'bg-slate-900 text-slate-700' : 'bg-green-600/20 text-green-400'}`}>
-                      <i className="fas fa-id-badge text-[9px]"></i>
-                    </div>
-                    <div className="flex-1 min-w-0 pr-1">
-                      <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{op.nome}</p>
-                      <p className="text-[6.5px] font-bold text-slate-400/80 uppercase tracking-tighter leading-none">ID: {op.matricula}</p>
-                    </div>
+            {filteredOperators.map(op => {
+              const isAssigned = Object.values(assignments).includes(op.nome.toUpperCase());
+              return (
+                <div 
+                  key={op.id}
+                  draggable={!isAssigned}
+                  onDragStart={(e) => handleDragStart(e, op.nome.toUpperCase())}
+                  className={`p-0 rounded-xl border transition-all flex items-center gap-1.5 cursor-grab active:cursor-grabbing group min-w-0 h-9
+                    ${isAssigned ? 'bg-slate-950/40 border-slate-800 opacity-30 cursor-not-allowed' : 'bg-green-600/30 border-green-500/20 hover:border-green-400 hover:bg-green-600/40 shadow-sm'}
+                  `}
+                >
+                  <div className={`w-6 h-full flex items-center justify-center flex-shrink-0 rounded-l-xl ${isAssigned ? 'bg-slate-900 text-slate-700' : 'bg-green-600/20 text-green-400'}`}>
+                    <i className="fas fa-id-badge text-[9px]"></i>
                   </div>
-                );
-              })}
-            </div>
+                  <div className="flex-1 min-w-0 pr-1">
+                    <p className="text-[8px] font-black text-white uppercase truncate leading-none mb-0.5">{op.nome}</p>
+                    <p className="text-[6.5px] font-bold text-slate-400/80 uppercase tracking-tighter leading-none">ID: {op.matricula}</p>
+                  </div>
+                </div>
+              );
+            })}
 
             {/* Mobile View: Simple List (Only when searching) */}
             <div className="sm:hidden flex flex-col gap-1 w-full">

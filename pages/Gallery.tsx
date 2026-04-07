@@ -25,9 +25,26 @@ const Gallery: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [activeFilter, setActiveFilter] = useState('TODOS');
+  const [selectedFaccao, setSelectedFaccao] = useState<string>('TODAS');
+  const [faccoes, setFaccoes] = useState<string[]>([]);
   const [selectedIndividual, setSelectedIndividual] = useState<Individual | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+
+  useEffect(() => {
+    const fetchFaccoes = async () => {
+      const { data, error } = await supabase
+        .from('individuos')
+        .select('faccao')
+        .not('faccao', 'is', null);
+      
+      if (!error && data) {
+        const uniqueFaccoes = Array.from(new Set(data.map(i => i.faccao))).filter(Boolean) as string[];
+        setFaccoes(uniqueFaccoes.sort());
+      }
+    };
+    fetchFaccoes();
+  }, []);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const lastElementRef = useCallback((node: HTMLDivElement) => {
@@ -73,6 +90,10 @@ const Gallery: React.FC = () => {
         }
       }
 
+      if (selectedFaccao !== 'TODAS') {
+        query = query.eq('faccao', selectedFaccao);
+      }
+
       const { data: result, error } = await query.range(from, to);
       
       if (!error && result) {
@@ -86,12 +107,12 @@ const Gallery: React.FC = () => {
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [activeFilter]);
+  }, [activeFilter, selectedFaccao]);
 
   useEffect(() => { 
     setPage(0); 
     fetchGalleryData(0, true); 
-  }, [activeFilter, fetchGalleryData]);
+  }, [activeFilter, selectedFaccao, fetchGalleryData]);
 
   useEffect(() => { 
     if (page > 0) fetchGalleryData(page); 
@@ -120,6 +141,14 @@ const Gallery: React.FC = () => {
         </div>
         
         <div className="flex flex-wrap gap-2">
+          <select
+            value={selectedFaccao}
+            onChange={(e) => setSelectedFaccao(e.target.value)}
+            className="bg-white border border-gray-200 text-gray-900 px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all"
+          >
+            <option value="TODAS">Todas as Facções</option>
+            {faccoes.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
           {['TODOS', ...CITIES, 'OUTROS'].map(city => (
             <button 
               key={city} 
